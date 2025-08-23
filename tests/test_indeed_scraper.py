@@ -51,8 +51,7 @@ class TestIndeedScraperInheritance(unittest.TestCase):
         
         # Indeed via JobSpy should support these filters
         expected_supported = [
-            'search_term', 'location', 'job_type', 
-            'remote_level', 'time_filter', 'results_wanted'
+            'search_term', 'location', 'remote_level', 'time_filter', 'results_wanted'
         ]
         for filter_name in expected_supported:
             self.assertIn(filter_name, supported)
@@ -60,7 +59,7 @@ class TestIndeedScraperInheritance(unittest.TestCase):
         
         # These should require post-processing
         expected_post_processing = [
-            'salary_currency', 'salary_min', 'salary_max', 'company_size'
+            'job_type', 'salary_currency', 'salary_min', 'salary_max', 'company_size'
         ]
         for filter_name in expected_post_processing:
             self.assertIn(filter_name, supported)
@@ -79,10 +78,9 @@ class TestIndeedScraperAPI(unittest.TestCase):
         filters = {
             'search_term': 'Python Developer',
             'where': 'United States',
-            'job_type': 'Full-time',
             'remote_level': 'Fully Remote',
             'time_filter': 'Past Week',
-            'results_wanted': 20
+            'results_wanted': 1000
         }
         
         params = self.scraper._build_api_search_params(**filters)
@@ -91,7 +89,7 @@ class TestIndeedScraperAPI(unittest.TestCase):
         self.assertIn('site_name', params)
         self.assertEqual(params['site_name'], ['indeed'])
         self.assertIn('results_wanted', params)
-        self.assertEqual(params['results_wanted'], 20)
+        self.assertEqual(params['results_wanted'], 1000)
         
         # Should include enhanced search term
         self.assertIn('search_term', params)
@@ -117,7 +115,6 @@ class TestIndeedScraperAPI(unittest.TestCase):
         """Test that time filter handles JobSpy limitations correctly."""
         filters = {
             'search_term': 'Developer',
-            'job_type': 'Full-time',
             'time_filter': 'Last 24h'  # Use correct time filter option
         }
         
@@ -144,7 +141,7 @@ class TestIndeedScraperAPI(unittest.TestCase):
         search_params = {
             'search_term': 'Python',
             'site_name': ['indeed'],
-            'results_wanted': 10
+            'results_wanted': 1000
         }
         
         result = self.scraper._call_scraping_api(search_params)
@@ -384,11 +381,10 @@ class TestIndeedScraperIntegration(unittest.TestCase):
         result = self.scraper.search_jobs(
             search_term="Python Developer",
             where="United States",
-            job_type="Full-time",
             remote_level="Fully Remote",
             salary_currency="USD",
             time_filter="Past Week",
-            results_wanted=20
+            results_wanted=1000
         )
         
         # Validate complete result format

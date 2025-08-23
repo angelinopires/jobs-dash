@@ -96,6 +96,11 @@ class BaseJobScraper(ABC):
         supported_api_filters = self.get_supported_api_filters()
         
         # Apply each post-processing filter if not handled by API
+        if not supported_api_filters.get('job_type', False):
+            job_type = filters.get('job_type', 'Any')
+            if job_type != 'Any':
+                filtered_df = self._filter_by_job_type(filtered_df, job_type)
+        
         if not supported_api_filters.get('salary_currency', False):
             salary_currency = filters.get('salary_currency', 'Any')
             if salary_currency != 'Any':
@@ -157,6 +162,53 @@ class BaseJobScraper(ABC):
         
         return jobs_df[currency_mask]
     
+    def _filter_by_job_type(self, jobs_df: pd.DataFrame, job_type: str) -> pd.DataFrame:
+        """
+        Universal job type filter for post-processing.
+        
+        Args:
+            jobs_df: Jobs DataFrame
+            job_type: Job type to filter for (Full-time, Part-time, etc.)
+            
+        Returns:
+            Filtered DataFrame
+        """
+        if jobs_df.empty or job_type == 'Any':
+            return jobs_df
+        
+        # Map display names to possible variations in the data
+        job_type_variations = {
+            'Full-time': ['fulltime', 'full-time', 'full time', 'permanent', 'salaried'],
+            'Part-time': ['parttime', 'part-time', 'part time', 'hourly'],
+            'Contract': ['contract', 'contractor', 'freelance', 'consulting', 'temporary', 'temp'],
+            'Internship': ['intern', 'internship', 'co-op', 'trainee']
+        }
+        
+        variations = job_type_variations.get(job_type, [job_type.lower()])
+        
+        # Check in job_type column if it exists
+        if 'job_type' in jobs_df.columns:
+            # Create mask for matching job types
+            mask = jobs_df['job_type'].fillna('').astype(str).str.lower().isin(variations)
+            
+            # Also check for partial matches in job_type
+            for variation in variations:
+                mask |= jobs_df['job_type'].fillna('').astype(str).str.lower().str.contains(variation, na=False)
+            
+            if mask.any():
+                return jobs_df[mask]
+        
+        # Fallback: check in title and description
+        mask = pd.Series([False] * len(jobs_df), index=jobs_df.index)
+        
+        for variation in variations:
+            if 'title' in jobs_df.columns:
+                mask |= jobs_df['title'].fillna('').astype(str).str.lower().str.contains(variation, na=False)
+            if 'description' in jobs_df.columns:
+                mask |= jobs_df['description'].fillna('').astype(str).str.lower().str.contains(variation, na=False)
+        
+        return jobs_df[mask] if mask.any() else jobs_df
+    
     def _filter_by_company_size(self, jobs_df: pd.DataFrame, company_size: str) -> pd.DataFrame:
         """
         Universal company size filter.
@@ -168,8 +220,6 @@ class BaseJobScraper(ABC):
         Returns:
             Filtered DataFrame
         """
-        # Implementation for company size filtering
-        # This would check company_num_employees or similar columns
         return jobs_df  # Placeholder
     
     def _filter_by_salary_range(self, jobs_df: pd.DataFrame, min_salary: Optional[int], max_salary: Optional[int]) -> pd.DataFrame:
@@ -296,13 +346,13 @@ class FilterCapabilities:
     API_FILTERS = {
         'search_term': 'Job title/keywords search',
         'location': 'Geographic location',
-        'job_type': 'Employment type (full-time, contract, etc.)',
         'remote_level': 'Remote work level',
         'time_filter': 'Job posting age',
         'results_wanted': 'Number of results to fetch'
     }
     
     POST_PROCESSING_FILTERS = {
+        'job_type': 'Employment type (full-time, contract, etc.)',
         'salary_currency': 'Filter by salary currency',
         'salary_range': 'Filter by salary amount range', 
         'company_size': 'Filter by company size',

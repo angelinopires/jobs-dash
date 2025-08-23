@@ -24,7 +24,7 @@ class TestFilterCapabilities(unittest.TestCase):
         # Should include common API-level filters
         self.assertIn('search_term', api_filters)
         self.assertIn('location', api_filters)
-        self.assertIn('job_type', api_filters)
+        # job_type is now handled via post-processing only
         self.assertIn('remote_level', api_filters)
         self.assertIn('time_filter', api_filters)
         
@@ -51,7 +51,7 @@ class TestFilterCapabilities(unittest.TestCase):
         """Test filter classification methods."""
         # API filters should be identified correctly
         self.assertTrue(FilterCapabilities.is_api_filter('search_term'))
-        self.assertTrue(FilterCapabilities.is_api_filter('job_type'))
+        self.assertFalse(FilterCapabilities.is_api_filter('job_type'))  # Now post-processing only
         self.assertFalse(FilterCapabilities.is_api_filter('salary_currency'))
         
         # Post-processing filters should be identified correctly
@@ -86,7 +86,7 @@ class ConcreteTestScraper(BaseJobScraper):
         return {
             'search_term': True,
             'location': True,
-            'job_type': True,
+            'job_type': False,  # Handled via post-processing
             'remote_level': False,  # Not supported - needs post-processing
             'time_filter': True,
             'salary_currency': False,  # Not supported - needs post-processing
@@ -105,8 +105,7 @@ class ConcreteTestScraper(BaseJobScraper):
         if supported.get('location') and filters.get('location'):
             params['location'] = filters['location']
         
-        if supported.get('job_type') and filters.get('job_type'):
-            params['job_type'] = filters['job_type']
+        # job_type is handled via post-processing only
         
         if supported.get('time_filter') and filters.get('time_filter'):
             params['hours_old'] = 24  # Mock conversion
@@ -192,7 +191,7 @@ class TestBaseJobScraper(unittest.TestCase):
         result = self.scraper.search_jobs(
             search_term="Python",
             location="Remote",
-            job_type="Full-time"
+            remote_level="Fully Remote"
         )
         
         # Should be successful
@@ -212,7 +211,7 @@ class TestBaseJobScraper(unittest.TestCase):
         result = self.scraper.search_jobs(
             search_term="Python",        # API supported
             location="Remote",           # API supported  
-            job_type="Full-time",        # API supported
+            remote_level="Fully Remote", # Remote level parameter
             salary_currency="USD",       # Post-processing needed
             company_size="50-100"        # Post-processing needed
         )

@@ -16,7 +16,6 @@ from config.remote_filters import (
     get_global_countries, 
     enhance_search_term_with_remote_keywords,
     get_country_flag_and_name,
-    get_job_type_code,
     get_remote_level_code
 )
 from utils.time_filters import get_hours_from_filter
@@ -35,11 +34,11 @@ class IndeedScraper(BaseJobScraper):
         Indeed via JobSpy supports these filters directly in the API call:
         - search_term: Job title/keywords ✓
         - location: Geographic location ✓  
-        - job_type: Employment type ✓
         - remote_level: Remote work level ✓ (via location="remote")
         - time_filter: Job posting age ✓ (via hours_old)
         
         These require post-processing:
+        - job_type: Employment type ✗ (handled entirely via post-processing)
         - salary_currency: Not supported by JobSpy API ✗
         - salary_range: Not supported by JobSpy API ✗
         - company_size: Not supported by JobSpy API ✗
@@ -47,7 +46,7 @@ class IndeedScraper(BaseJobScraper):
         return {
             'search_term': True,
             'location': True,
-            'job_type': True,
+            'job_type': False,        # Handled entirely via post-processing
             'remote_level': True, 
             'time_filter': True,
             'results_wanted': True,
@@ -67,7 +66,7 @@ class IndeedScraper(BaseJobScraper):
         # Base parameters
         search_params = {
             "site_name": ["indeed"],
-            "results_wanted": filters.get('results_wanted', 20),
+            "results_wanted": filters.get('results_wanted', 1000),
         }
         
         # Add search term (always supported)
@@ -89,14 +88,6 @@ class IndeedScraper(BaseJobScraper):
             if remote_code == "FULLY_REMOTE":
                 search_params["location"] = "remote"
         
-        # Add job type if supported and specified
-        if supported_filters.get('job_type', False):
-            job_type = filters.get('job_type', 'Any')
-            if job_type and job_type != 'Any':
-                job_type_code = get_job_type_code(job_type)
-                if job_type_code != "ANY":
-                    search_params["job_type"] = job_type_code
-        
         # Add time filter if supported
         if supported_filters.get('time_filter', False):
             time_filter = filters.get('time_filter', 'Any')
@@ -104,9 +95,6 @@ class IndeedScraper(BaseJobScraper):
                 hours_old = get_hours_from_filter(time_filter)
                 if hours_old is not None:
                     search_params["hours_old"] = hours_old
-                    # JobSpy limitation: can't use job_type with hours_old
-                    if "job_type" in search_params:
-                        del search_params["job_type"]
         
         # Add proxies if provided
         if filters.get('proxies'):
@@ -130,11 +118,10 @@ class IndeedScraper(BaseJobScraper):
         self,
         search_term: str = "",
         where: str = "",
-        job_type: str = "Full-time",
         remote_level: str = "Fully Remote",
         salary_currency: str = "Any",
         time_filter: str = "1 week or more",
-        results_wanted: int = 20,
+        results_wanted: int = 1000,
         proxies: Optional[List[str]] = None,
         progress_callback=None,
         **kwargs
@@ -149,11 +136,10 @@ class IndeedScraper(BaseJobScraper):
         Args:
             search_term: Job title or keywords
             where: "Global" for multi-country search or specific country name
-            job_type: Job type filter
             remote_level: Remote level 
             salary_currency: Preferred salary currency
             time_filter: Job posting age filter
-            results_wanted: Number of jobs to fetch
+            results_wanted: Number of jobs to fetch (default: 1000 for maximum results)
             proxies: List of proxy servers
             progress_callback: Function to update progress
             **kwargs: Additional filters
@@ -166,7 +152,6 @@ class IndeedScraper(BaseJobScraper):
             'search_term': search_term,
             'where': where,
             'location': where,  # Alias for compatibility
-            'job_type': job_type,
             'remote_level': remote_level,
             'salary_currency': salary_currency,
             'time_filter': time_filter,
@@ -197,8 +182,14 @@ class IndeedScraper(BaseJobScraper):
         
         for i, (flag, country_name, country_code) in enumerate(global_countries):
             try:
-                # Update progress
-                progress_percent = 0.2 + (i / len(global_countries)) * 0.6
+                # Update progress - show 100% when searching the last country
+                if i == len(global_countries) - 1:
+                    # Last country - show 100%
+                    progress_percent = 1.0
+                else:
+                    # For other countries, scale from 10% to 95%
+                    progress_percent = 0.1 + ((i + 0.5) / len(global_countries)) * 0.85  # 10% to 95%
+                
                 if progress_callback:
                     progress_callback(f"Searching {flag} {country_name} ({i+1}/{len(global_countries)})...", progress_percent)
                 
@@ -283,6 +274,10 @@ class IndeedScraper(BaseJobScraper):
             if col not in jobs_df.columns:
                 jobs_df[col] = None
         
+        # Add job_type column if not present (derive from title/description)
+        if 'job_type' not in jobs_df.columns:
+            jobs_df['job_type'] = self._derive_job_type(jobs_df)
+        
         # Clean and format data
         processed_jobs = jobs_df.copy()
         
@@ -325,6 +320,51 @@ class IndeedScraper(BaseJobScraper):
             )
         
         return processed_jobs
+    
+    def _derive_job_type(self, jobs_df):
+        """
+        Derive job type from job title and description.
+        
+        Args:
+            jobs_df: Jobs DataFrame
+            
+        Returns:
+            Series with job types
+        """
+        import pandas as pd
+        
+        if jobs_df.empty:
+            return pd.Series([], dtype=str)
+        
+        job_types = []
+        
+        # Job type keywords mapping
+        type_keywords = {
+            'Full-time': ['full time', 'full-time', 'permanent', 'salaried'],
+            'Part-time': ['part time', 'part-time', 'hourly'],
+            'Contract': ['contract', 'contractor', 'freelance', 'consulting', 'temporary', 'temp'],
+            'Internship': ['intern', 'internship', 'co-op', 'trainee']
+        }
+        
+        for idx, row in jobs_df.iterrows():
+            title = str(row.get('title', '')).lower()
+            description = str(row.get('description', '')).lower() 
+            combined_text = f"{title} {description}"
+            
+            # Check for job type keywords
+            detected_type = 'Full-time'  # Default
+            
+            for job_type, keywords in type_keywords.items():
+                for keyword in keywords:
+                    if keyword in combined_text:
+                        detected_type = job_type
+                        break
+                if detected_type != 'Full-time':
+                    break
+            
+            job_types.append(detected_type)
+        
+        return pd.Series(job_types, index=jobs_df.index)
     
     def _format_location(self, location):
         """Format location object for display."""
@@ -506,8 +546,8 @@ class IndeedScraper(BaseJobScraper):
             elif diff.days < 7:
                 return f"{diff.days} days ago"
             else:
-                # Full date for older posts
-                return date_obj.strftime("%b %d, %Y")
+                # Full date for older posts - match search history format
+                return date_obj.strftime("%b %d, %Y %H:%M")
                 
         except Exception as e:
             # Fallback to string representation
@@ -522,15 +562,15 @@ class IndeedScraper(BaseJobScraper):
             "distance": "Search radius in miles (default: 50)",
             "is_remote": "Filter for remote jobs",
             "time_filter": "Filter by posting age (24h, 72h, 1 week, or no filter)",
-            "results_wanted": "Number of jobs to fetch (5-100)",
+            "results_wanted": "Number of jobs to fetch (default: 1000 for maximum results)",
             "proxies": "List of proxy servers for rotation"
         }
     
     def get_limitations(self) -> List[str]:
         """Get list of Indeed scraper limitations."""
         return [
-            "Cannot use 'hours_old' with 'job_type' or 'easy_apply' simultaneously",
             "Maximum of 1000 jobs per search",
             "Rate limiting may apply without proxies",
-            "Some job details may be incomplete"
+            "Some job details may be incomplete",
+            "Job type filtering handled via post-processing (more accurate)"
         ]
