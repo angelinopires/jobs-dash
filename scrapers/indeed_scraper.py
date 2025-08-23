@@ -10,6 +10,7 @@ from typing import Optional, List, Dict, Any
 from jobspy import scrape_jobs
 from jobspy.model import JobType
 
+from .base_scraper import BaseJobScraper
 from config.countries import get_indeed_country_name
 from config.remote_filters import (
     get_global_countries, 
@@ -20,86 +21,175 @@ from config.remote_filters import (
 )
 from utils.time_filters import get_hours_from_filter
 
-class IndeedScraper:
+class IndeedScraper(BaseJobScraper):
     """Enhanced Indeed scraper with better parameter handling and error management."""
     
     def __init__(self):
-        self.last_search_time = 0
-        self.min_delay = 2  # Minimum delay between searches in seconds
+        super().__init__()
+        self.min_delay = 2  # Override base class delay for Indeed-specific rate limiting
+    
+    def get_supported_api_filters(self) -> Dict[str, bool]:
+        """
+        Return which filters Indeed supports at API level.
+        
+        Indeed via JobSpy supports these filters directly in the API call:
+        - search_term: Job title/keywords ✓
+        - location: Geographic location ✓  
+        - job_type: Employment type ✓
+        - remote_level: Remote work level ✓ (via location="remote")
+        - time_filter: Job posting age ✓ (via hours_old)
+        
+        These require post-processing:
+        - salary_currency: Not supported by JobSpy API ✗
+        - salary_range: Not supported by JobSpy API ✗
+        - company_size: Not supported by JobSpy API ✗
+        """
+        return {
+            'search_term': True,
+            'location': True,
+            'job_type': True,
+            'remote_level': True, 
+            'time_filter': True,
+            'results_wanted': True,
+            'salary_currency': False,  # Need post-processing
+            'salary_min': False,      # Need post-processing
+            'salary_max': False,      # Need post-processing
+            'company_size': False,    # Need post-processing
+        }
+    
+    def _build_api_search_params(self, **filters) -> Dict[str, Any]:
+        """
+        Build JobSpy API parameters from user filters.
+        Only includes filters that Indeed/JobSpy supports natively.
+        """
+        supported_filters = self.get_supported_api_filters()
+        
+        # Base parameters
+        search_params = {
+            "site_name": ["indeed"],
+            "results_wanted": filters.get('results_wanted', 20),
+        }
+        
+        # Add search term (always supported)
+        if filters.get('search_term'):
+            # Enhance with remote keywords for better remote job targeting
+            search_params["search_term"] = enhance_search_term_with_remote_keywords(
+                filters['search_term']
+            )
+        
+        # Add location/country (convert to Indeed format)
+        where = filters.get('where', filters.get('location', ''))
+        if where and where != "Global":
+            search_params["country_indeed"] = get_indeed_country_name(where)
+        
+        # Handle remote level (JobSpy uses location="remote" for remote jobs)
+        if supported_filters.get('remote_level', False):
+            remote_level = filters.get('remote_level', 'Any')
+            remote_code = get_remote_level_code(remote_level)
+            if remote_code == "FULLY_REMOTE":
+                search_params["location"] = "remote"
+        
+        # Add job type if supported and specified
+        if supported_filters.get('job_type', False):
+            job_type = filters.get('job_type', 'Any')
+            if job_type and job_type != 'Any':
+                job_type_code = get_job_type_code(job_type)
+                if job_type_code != "ANY":
+                    search_params["job_type"] = job_type_code
+        
+        # Add time filter if supported
+        if supported_filters.get('time_filter', False):
+            time_filter = filters.get('time_filter', 'Any')
+            if time_filter and time_filter != 'Any':
+                hours_old = get_hours_from_filter(time_filter)
+                if hours_old is not None:
+                    search_params["hours_old"] = hours_old
+                    # JobSpy limitation: can't use job_type with hours_old
+                    if "job_type" in search_params:
+                        del search_params["job_type"]
+        
+        # Add proxies if provided
+        if filters.get('proxies'):
+            search_params["proxies"] = filters['proxies']
+        
+        return search_params
+    
+    def _call_scraping_api(self, search_params: Dict[str, Any]) -> pd.DataFrame:
+        """
+        Call JobSpy's scrape_jobs function with Indeed-specific parameters.
+        """
+        try:
+            jobs_df = scrape_jobs(**search_params)
+            return jobs_df if not jobs_df.empty else pd.DataFrame()
+        except Exception as e:
+            # Log the error but return empty DataFrame so base class can handle it
+            print(f"JobSpy API call failed: {str(e)}")
+            return pd.DataFrame()
         
     def search_jobs(
         self,
-        search_term: str,
-        where: str,
+        search_term: str = "",
+        where: str = "",
         job_type: str = "Full-time",
         remote_level: str = "Fully Remote",
         salary_currency: str = "Any",
         time_filter: str = "1 week or more",
         results_wanted: int = 20,
         proxies: Optional[List[str]] = None,
-        progress_callback=None
+        progress_callback=None,
+        **kwargs
     ) -> Dict[str, Any]:
         """
-        Search for remote jobs using Indeed with enhanced parameters.
+        Search for jobs using Indeed. Supports both single-country and global searches.
+        
+        This method extends the base class to handle Indeed's special global search capability.
+        For single countries, it uses the standard base class flow.
+        For global searches, it implements custom multi-country logic.
         
         Args:
-            search_term: Job title or keywords (will be enhanced with remote keywords)
+            search_term: Job title or keywords
             where: "Global" for multi-country search or specific country name
-            job_type: Job type filter ("Any", "Full-time", "Contract", "Part-time")
-            remote_level: Remote level ("Fully Remote", "Hybrid", "Any")
-            salary_currency: Preferred salary currency ("Any", "USD", "EUR", etc.)
-            time_filter: User-friendly time filter option
-            results_wanted: Number of jobs to fetch per country
+            job_type: Job type filter
+            remote_level: Remote level 
+            salary_currency: Preferred salary currency
+            time_filter: Job posting age filter
+            results_wanted: Number of jobs to fetch
             proxies: List of proxy servers
             progress_callback: Function to update progress
+            **kwargs: Additional filters
             
         Returns:
             Dict with results and metadata
         """
-        try:
-            # Rate limiting
-            self._enforce_rate_limit()
-            
-            # Enhance search term with remote keywords for better remote job results
-            enhanced_search_term = enhance_search_term_with_remote_keywords(search_term)
-            
-            # Convert filter parameters
-            hours_old = get_hours_from_filter(time_filter)
-            job_type_code = get_job_type_code(job_type)
-            remote_level_code = get_remote_level_code(remote_level)
-            
-            # Determine search strategy
-            if where == "Global":
-                return self._search_global_remote_jobs(
-                    enhanced_search_term, job_type_code, remote_level_code, 
-                    salary_currency, hours_old, results_wanted, proxies, progress_callback
-                )
-            else:
-                return self._search_country_remote_jobs(
-                    enhanced_search_term, where, job_type_code, remote_level_code,
-                    salary_currency, hours_old, results_wanted, proxies, progress_callback
-                )
-            
-        except Exception as e:
-            error_msg = f"Error during Indeed remote search: {str(e)}"
-            return {
-                "success": False,
-                "jobs": None,
-                "count": 0,
-                "search_time": 0,
-                "message": error_msg,
-                "error": str(e)
-            }
+        # Package all filters for base class
+        all_filters = {
+            'search_term': search_term,
+            'where': where,
+            'location': where,  # Alias for compatibility
+            'job_type': job_type,
+            'remote_level': remote_level,
+            'salary_currency': salary_currency,
+            'time_filter': time_filter,
+            'results_wanted': results_wanted,
+            'proxies': proxies,
+            **kwargs
+        }
+        
+        # Handle global searches (special Indeed feature)
+        if where == "Global":
+            return self._search_global_remote_jobs(
+                all_filters, progress_callback
+            )
+        else:
+            # Use base class for single-country searches
+            return super().search_jobs(**all_filters)
     
     def _search_global_remote_jobs(
-        self, search_term: str, job_type_code: str, remote_level_code: str,
-        salary_currency: str, hours_old: Optional[int], results_wanted: int,
-        proxies: Optional[List[str]], progress_callback=None
+        self, filters: Dict[str, Any], progress_callback=None
     ) -> Dict[str, Any]:
-        """Search for remote jobs across multiple countries."""
+        """Search for remote jobs across multiple countries using base class architecture."""
         global_countries = get_global_countries()
         all_jobs = []
-        search_times = []
         total_start_time = time.time()
         
         if progress_callback:
@@ -107,25 +197,26 @@ class IndeedScraper:
         
         for i, (flag, country_name, country_code) in enumerate(global_countries):
             try:
-                # Update progress with percentage
-                progress_percent = 0.2 + (i / len(global_countries)) * 0.6  # 20% to 80%
+                # Update progress
+                progress_percent = 0.2 + (i / len(global_countries)) * 0.6
                 if progress_callback:
                     progress_callback(f"Searching {flag} {country_name} ({i+1}/{len(global_countries)})...", progress_percent)
                 
-                # Search this country
-                country_result = self._search_single_country(
-                    search_term, country_code, job_type_code, remote_level_code,
-                    hours_old, results_wanted, proxies
-                )
+                # Create country-specific filters
+                country_filters = filters.copy()
+                country_filters['where'] = country_name
+                country_filters['location'] = country_name
+                
+                # Use base class search for this country
+                country_result = super().search_jobs(**country_filters)
                 
                 if country_result["success"] and country_result["jobs"] is not None:
-                    # Add country information to each job
+                    # Add country metadata to jobs
                     country_jobs = country_result["jobs"].copy()
                     country_jobs["country_flag"] = flag
                     country_jobs["country_name"] = country_name 
                     country_jobs["country_code"] = country_code
                     all_jobs.append(country_jobs)
-                    search_times.append(country_result["search_time"])
                 
                 # Rate limiting between countries
                 time.sleep(1)
@@ -135,163 +226,47 @@ class IndeedScraper:
                     progress_callback(f"⚠️ Failed to search {country_name}: {str(e)}", progress_percent)
                 continue
         
-        # Combine all results
+        # Combine results
         if not all_jobs:
             total_time = time.time() - total_start_time
             return {
                 "success": True,
-                "jobs": None,
+                "jobs": pd.DataFrame(),
                 "count": 0,
-                "search_time": total_time,
-                "message": f"No remote jobs found globally for '{search_term}'"
+                "search_time": total_time,  # ✅ Add missing search_time
+                "message": f"No remote jobs found globally for '{filters.get('search_term', '')}'",
+                "metadata": {"search_type": "global", "countries_searched": 0}
             }
         
         # Concatenate all job DataFrames
-        import pandas as pd
         combined_jobs = pd.concat(all_jobs, ignore_index=True)
         
         # Remove duplicates based on job_url
         if 'job_url' in combined_jobs.columns:
             combined_jobs = combined_jobs.drop_duplicates(subset=['job_url'], keep='first')
         
-        # Process and clean the combined data
-        processed_jobs = self._process_jobs(combined_jobs)
-        
-        # Apply salary currency filter if specified
-        if salary_currency != "Any":
-            processed_jobs = self._filter_by_salary_currency(processed_jobs, salary_currency)
-        
         total_time = time.time() - total_start_time
-        countries_searched = len([c for c in global_countries if any(jobs["country_code"].iloc[0] == c[2] for jobs in all_jobs if not jobs.empty)])
+        countries_searched = len(all_jobs)
         
         if progress_callback:
-            progress_callback(f"✅ Global search complete! Found {len(processed_jobs)} remote jobs", 1.0)
+            progress_callback(f"✅ Global search complete! Found {len(combined_jobs)} remote jobs", 1.0)
         
         return {
             "success": True,
-            "jobs": processed_jobs,
-            "count": len(processed_jobs),
-            "search_time": total_time,
-            "message": f"Found {len(processed_jobs)} remote jobs across {countries_searched} countries",
+            "jobs": combined_jobs,
+            "count": len(combined_jobs),
+            "search_time": total_time,  # ✅ Add missing search_time
+            "message": f"Found {len(combined_jobs)} remote jobs across {countries_searched} countries",
             "metadata": {
                 "search_type": "global",
                 "countries_searched": countries_searched,
                 "total_countries": len(global_countries),
-                "enhanced_search_term": search_term
+                "api_filters_used": list(self._build_api_search_params(**filters).keys()),
+                "post_processing_applied": self._get_post_processing_filters_used(**filters)
             }
         }
     
-    def _search_country_remote_jobs(
-        self, search_term: str, country: str, job_type_code: str, remote_level_code: str,
-        salary_currency: str, hours_old: Optional[int], results_wanted: int,
-        proxies: Optional[List[str]], progress_callback=None
-    ) -> Dict[str, Any]:
-        """Search for remote jobs in a specific country."""
-        indeed_country = get_indeed_country_name(country)
-        
-        if progress_callback:
-            progress_callback(f"Searching remote jobs in {country}...", 0.3)
-        
-        start_time = time.time()
-        result = self._search_single_country(
-            search_term, indeed_country, job_type_code, remote_level_code,
-            hours_old, results_wanted, proxies
-        )
-        
-        if progress_callback:
-            progress_callback(f"Processing {country} results...", 0.8)
-        search_time = time.time() - start_time
-        
-        if result["success"] and result["jobs"] is not None:
-            # Add country information
-            jobs_with_country = result["jobs"].copy()
-            flag, country_display = get_country_flag_and_name(indeed_country)
-            jobs_with_country["country_flag"] = flag
-            jobs_with_country["country_name"] = country_display
-            jobs_with_country["country_code"] = indeed_country
-            
-            # Process and clean the data
-            processed_jobs = self._process_jobs(jobs_with_country)
-            
-            # Apply salary currency filter if specified
-            if salary_currency != "Any":
-                processed_jobs = self._filter_by_salary_currency(processed_jobs, salary_currency)
-            
-            return {
-                "success": True,
-                "jobs": processed_jobs,
-                "count": len(processed_jobs),
-                "search_time": search_time,
-                "message": f"Found {len(processed_jobs)} remote jobs in {country}",
-                "metadata": {
-                    "search_type": "country",
-                    "country": country,
-                    "country_code": indeed_country,
-                    "enhanced_search_term": search_term
-                }
-            }
-        else:
-            return {
-                "success": True,
-                "jobs": None,
-                "count": 0,
-                "search_time": search_time,
-                "message": f"No remote jobs found in {country}",
-                "metadata": {
-                    "search_type": "country",
-                    "country": country,
-                    "country_code": indeed_country
-                }
-            }
-    
-    def _search_single_country(
-        self, search_term: str, country_code: str, job_type_code: str, 
-        remote_level_code: str, hours_old: Optional[int], results_wanted: int,
-        proxies: Optional[List[str]]
-    ) -> Dict[str, Any]:
-        """Perform a single country search with remote-first parameters."""
-        
-        # Prepare base search parameters (less restrictive for debugging)
-        search_params = {
-            "search_term": search_term,
-            "country_indeed": country_code,
-            "results_wanted": results_wanted,
-            "site_name": ["indeed"]
-        }
-        
-        # Add location for remote search
-        if remote_level_code == "FULLY_REMOTE":
-            search_params["location"] = "remote"
-            # search_params["is_remote"] = True  # Commenting out to test
-        else:
-            search_params["location"] = ""
-        
-        # Add job type filter if not "Any" (using string values as expected by JobSpy)
-        if job_type_code != "ANY":
-            search_params["job_type"] = job_type_code  # Use the lowercase string directly
-        
-        # Add time filter if specified (avoiding conflicts)
-        if hours_old is not None:
-            search_params["hours_old"] = hours_old
-            # Note: Cannot use job_type with hours_old in JobSpy
-            if "job_type" in search_params:
-                del search_params["job_type"]
-        
-        # Add proxies if provided
-        if proxies:
-            search_params["proxies"] = proxies
-        
-        # Perform the search
-        start_time = time.time()
-        jobs = scrape_jobs(**search_params)
-        search_time = time.time() - start_time
-        
-        return {
-            "success": True,
-            "jobs": jobs if not jobs.empty else None,
-            "search_time": search_time,
-            "search_params": search_params
-        }
+    # Override base class _process_jobs to add Indeed-specific formatting
     
     def _process_jobs(self, jobs_df):
         """Process and clean the jobs DataFrame for display."""
@@ -350,54 +325,6 @@ class IndeedScraper:
             )
         
         return processed_jobs
-    
-    def _filter_by_salary_currency(self, jobs_df: pd.DataFrame, target_currency: str) -> pd.DataFrame:
-        """
-        Filter jobs by salary currency after scraping.
-        
-        Since JobSpy doesn't support salary currency filtering at API level,
-        we filter the results post-processing.
-        """
-        if target_currency == "Any" or jobs_df.empty:
-            return jobs_df
-        
-        # Create a boolean mask for jobs that match the currency
-        currency_mask = pd.Series([True] * len(jobs_df), index=jobs_df.index)
-        
-        # Check different currency columns
-        currency_columns = ['currency', 'salary_currency']
-        
-        for col in currency_columns:
-            if col in jobs_df.columns:
-                # Filter by exact currency match (case insensitive)
-                currency_mask &= (
-                    jobs_df[col].fillna('').astype(str).str.upper() == target_currency.upper()
-                )
-        
-        # If no currency columns exist, check salary_formatted for currency symbols
-        if 'salary_formatted' in jobs_df.columns and not any(col in jobs_df.columns for col in currency_columns):
-            currency_patterns = {
-                'USD': ['$', 'USD', 'US$'],
-                'EUR': ['€', 'EUR', 'euro'],
-                'GBP': ['£', 'GBP', 'pound'],
-                'CAD': ['CAD', 'C$', 'canadian'],
-                'AUD': ['AUD', 'A$', 'australian'],
-                'BRL': ['R$', 'BRL', 'real', 'reais']
-            }
-            
-            if target_currency.upper() in currency_patterns:
-                patterns = currency_patterns[target_currency.upper()]
-                # Check if any of the patterns exist in salary_formatted
-                pattern_mask = pd.Series([False] * len(jobs_df), index=jobs_df.index)
-                
-                for pattern in patterns:
-                    pattern_mask |= jobs_df['salary_formatted'].fillna('').str.contains(
-                        pattern, case=False, na=False
-                    )
-                
-                currency_mask &= pattern_mask
-        
-        return jobs_df[currency_mask]
     
     def _format_location(self, location):
         """Format location object for display."""
@@ -585,17 +512,6 @@ class IndeedScraper:
         except Exception as e:
             # Fallback to string representation
             return str(date_posted) if date_posted else "N/A"
-    
-    def _enforce_rate_limit(self):
-        """Enforce minimum delay between searches."""
-        current_time = time.time()
-        time_since_last = current_time - self.last_search_time
-        
-        if time_since_last < self.min_delay:
-            sleep_time = self.min_delay - time_since_last
-            time.sleep(sleep_time)
-        
-        self.last_search_time = time.time()
     
     def get_supported_parameters(self) -> Dict[str, Any]:
         """Get information about supported parameters."""

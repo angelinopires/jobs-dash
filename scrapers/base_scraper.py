@@ -150,11 +150,12 @@ class BaseJobScraper(ABC):
         for col in currency_columns:
             if col in jobs_df.columns:
                 for pattern in patterns:
-                    currency_mask |= jobs_df[col].fillna('').astype(str).str.contains(
-                        pattern, case=False, na=False
+                    matches = jobs_df[col].fillna('').astype(str).str.contains(
+                        pattern, case=False, na=False, regex=False  # Disable regex for exact matching
                     )
+                    currency_mask |= matches
         
-        return jobs_df[currency_mask] if currency_mask.any() else jobs_df
+        return jobs_df[currency_mask]
     
     def _filter_by_company_size(self, jobs_df: pd.DataFrame, company_size: str) -> pd.DataFrame:
         """
@@ -197,8 +198,10 @@ class BaseJobScraper(ABC):
             **filters: All user-requested filters
             
         Returns:
-            Dict with search results and metadata
+            Dict with search results and metadata including search_time
         """
+        start_time = time.time()
+        
         try:
             # Rate limiting
             self._enforce_rate_limit()
@@ -215,10 +218,13 @@ class BaseJobScraper(ABC):
             # Format and clean data
             processed_jobs = self._process_jobs(filtered_jobs)
             
+            search_time = time.time() - start_time
+            
             return {
                 "success": True,
                 "jobs": processed_jobs,
                 "count": len(processed_jobs),
+                "search_time": search_time,  # Dashboard expects this field
                 "message": f"Found {len(processed_jobs)} jobs",
                 "metadata": {
                     "api_filters_used": list(api_params.keys()),
@@ -227,10 +233,12 @@ class BaseJobScraper(ABC):
             }
             
         except Exception as e:
+            search_time = time.time() - start_time
             return {
                 "success": False,
                 "jobs": None,
                 "count": 0,
+                "search_time": search_time,  # Include timing even for errors
                 "message": f"Search failed: {str(e)}",
                 "metadata": {"error": str(e)}
             }
