@@ -68,6 +68,20 @@ pip install --upgrade -r requirements.txt
 - Open your browser to `http://localhost:8501`
 - The dashboard will load automatically
 
+## 🧪 Testing
+
+### **Unit Tests**
+The project includes a comprehensive test suite covering the scraper architecture and core functionality.
+
+```bash
+# Run all tests
+python3 tests/run_tests.py
+
+# Run specific test module
+python3 -m unittest tests.test_base_scraper -v
+python3 -m unittest tests.test_indeed_scraper -v
+```
+
 ## 🔧 Customization
 
 ### **Adding New Job Sites**
