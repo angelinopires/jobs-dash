@@ -11,8 +11,8 @@ from datetime import datetime
 from scrapers.indeed_scraper import IndeedScraper
 from config.countries import get_country_options
 from config.remote_filters import (
-    get_remote_level_options,
-    get_global_countries_display
+    get_global_countries_display,
+    enhance_search_term_with_remote_keywords
 )
 from utils.time_filters import get_time_filter_options
 from utils.toast import success_toast, error_toast, warning_toast, info_toast
@@ -74,7 +74,14 @@ def create_search_sidebar():
     search_term = st.text_input(
         "Search Term",
         value="Software Engineer",
-        help="Enter job title or keywords (remote keywords will be added automatically)"
+        help="Enter job title or keywords"
+    )
+    
+    # Remote checkbox
+    include_remote = st.checkbox(
+        "Remote Only",
+        value=True,
+        help="Include only remote positions"
     )
     
     # Where (Global or specific country)
@@ -91,15 +98,7 @@ def create_search_sidebar():
         st.info(f"🌍 **Global search includes:** {get_global_countries_display()}")
     
 
-    
-    # Remote Level
-    remote_level_options = get_remote_level_options()
-    selected_remote_level = st.selectbox(
-        "Remote Level", 
-        options=remote_level_options,
-        index=0,  # "Fully Remote" is default
-        help="Specify remote work requirements"
-    )
+
     
     # Time filter
     time_options = get_time_filter_options()
@@ -128,7 +127,7 @@ def create_search_sidebar():
         perform_remote_job_search(
             search_term=search_term,
             where=selected_where,
-            remote_level=selected_remote_level,
+            include_remote=include_remote,
             time_filter=time_filter,
             proxies=proxy_list if proxy_list else None
         )
@@ -206,7 +205,7 @@ def create_csv_download(history_item):
     
     return csv_buffer.getvalue()
 
-def perform_remote_job_search(search_term, where, remote_level, time_filter, proxies):
+def perform_remote_job_search(search_term, where, include_remote, time_filter, proxies):
     """Perform the remote job search with enhanced error handling."""
     
     # Validate inputs
@@ -227,21 +226,26 @@ def perform_remote_job_search(search_term, where, remote_level, time_filter, pro
     
     try:
         # Start search
-        update_progress("Initializing remote job scraper...", 0.1)
+        update_progress("Initializing job scraper...", 0.1)
         
         # Get scraper instance
         scraper = st.session_state.indeed_scraper
         
+        # Enhance search term with remote keywords if checkbox is checked
+        final_search_term = search_term
+        if include_remote:
+            final_search_term = enhance_search_term_with_remote_keywords(search_term)
+        
         # Perform search
         if where == "Global":
-            update_progress("Starting global remote job search...", 0.2)
+            update_progress("Starting global job search...", 0.2)
         else:
-            update_progress(f"Searching remote jobs in {where}...", 0.2)
+            update_progress(f"Searching jobs in {where}...", 0.2)
         
         result = scraper.search_jobs(
-            search_term=search_term,
+            search_term=final_search_term,
             where=where,
-            remote_level=remote_level,
+            include_remote=include_remote,
             time_filter=time_filter,
             proxies=proxies if proxies else None,
             progress_callback=update_progress
@@ -267,7 +271,7 @@ def perform_remote_job_search(search_term, where, remote_level, time_filter, pro
                     "search_term": search_term,
                     "where": where,
                     "filters": {
-                        "remote_level": remote_level,
+                        "include_remote": include_remote,
                         "time_filter": time_filter
                     },
                     "results_summary": {
@@ -277,7 +281,7 @@ def perform_remote_job_search(search_term, where, remote_level, time_filter, pro
                         "search_type": result.get("metadata", {}).get("search_type", "unknown")
                     },
                     "jobs_data": result["jobs"].to_dict('records') if result["jobs"] is not None else [],
-                    "display_title": f"{search_term} ({where}) - {result['count']} jobs"
+                    "display_title": f"{search_term} {'(Remote) ' if include_remote else ''}({where}) - {result['count']} jobs"
                 }
                 st.session_state.search_history.append(history_item)
                 

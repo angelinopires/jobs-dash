@@ -25,7 +25,6 @@ class TestFilterCapabilities(unittest.TestCase):
         self.assertIn('search_term', api_filters)
         self.assertIn('location', api_filters)
         # job_type is now handled via post-processing only
-        self.assertIn('remote_level', api_filters)
         self.assertIn('time_filter', api_filters)
         
         # Each should have a description
@@ -87,7 +86,7 @@ class ConcreteTestScraper(BaseJobScraper):
             'search_term': True,
             'location': True,
             'job_type': False,  # Handled via post-processing
-            'remote_level': False,  # Not supported - needs post-processing
+
             'time_filter': True,
             'salary_currency': False,  # Not supported - needs post-processing
             'company_size': False,  # Not supported - needs post-processing
@@ -191,7 +190,7 @@ class TestBaseJobScraper(unittest.TestCase):
         result = self.scraper.search_jobs(
             search_term="Python",
             location="Remote",
-            remote_level="Fully Remote"
+            include_remote=True
         )
         
         # Should be successful
@@ -211,7 +210,7 @@ class TestBaseJobScraper(unittest.TestCase):
         result = self.scraper.search_jobs(
             search_term="Python",        # API supported
             location="Remote",           # API supported  
-            remote_level="Fully Remote", # Remote level parameter
+            include_remote=True, # Remote level parameter
             salary_currency="USD",       # Post-processing needed
             company_size="50-100"        # Post-processing needed
         )

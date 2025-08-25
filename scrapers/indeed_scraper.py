@@ -6,6 +6,8 @@ Handles all Indeed-specific parameters and provides better error handling.
 import time
 import pandas as pd
 import streamlit as st
+import logging
+import urllib.parse
 from typing import Optional, List, Dict, Any
 from jobspy import scrape_jobs
 from jobspy.model import JobType
@@ -14,9 +16,7 @@ from .base_scraper import BaseJobScraper
 from config.countries import get_indeed_country_name
 from config.remote_filters import (
     get_global_countries, 
-    enhance_search_term_with_remote_keywords,
-    get_country_flag_and_name,
-    get_remote_level_code
+    get_country_flag_and_name
 )
 from utils.time_filters import get_hours_from_filter
 
@@ -34,7 +34,6 @@ class IndeedScraper(BaseJobScraper):
         Indeed via JobSpy supports these filters directly in the API call:
         - search_term: Job title/keywords ✓
         - location: Geographic location ✓  
-        - remote_level: Remote work level ✓ (via location="remote")
         - time_filter: Job posting age ✓ (via hours_old)
         
         These require post-processing:
@@ -47,7 +46,6 @@ class IndeedScraper(BaseJobScraper):
             'search_term': True,
             'location': True,
             'job_type': False,        # Handled entirely via post-processing
-            'remote_level': True, 
             'time_filter': True,
             'results_wanted': True,
             'salary_currency': False,  # Need post-processing
@@ -71,22 +69,16 @@ class IndeedScraper(BaseJobScraper):
         
         # Add search term (always supported)
         if filters.get('search_term'):
-            # Enhance with remote keywords for better remote job targeting
-            search_params["search_term"] = enhance_search_term_with_remote_keywords(
-                filters['search_term']
-            )
+            search_params["search_term"] = filters['search_term']
         
         # Add location/country (convert to Indeed format)
         where = filters.get('where', filters.get('location', ''))
         if where and where != "Global":
             search_params["country_indeed"] = get_indeed_country_name(where)
         
-        # Handle remote level (JobSpy uses location="remote" for remote jobs)
-        if supported_filters.get('remote_level', False):
-            remote_level = filters.get('remote_level', 'Any')
-            remote_code = get_remote_level_code(remote_level)
-            if remote_code == "FULLY_REMOTE":
-                search_params["location"] = "remote"
+        # Handle remote checkbox (set location="remote" when checked)
+        if filters.get('include_remote', False):
+            search_params["location"] = "remote"
         
         # Add time filter if supported
         if supported_filters.get('time_filter', False):
@@ -107,18 +99,139 @@ class IndeedScraper(BaseJobScraper):
         Call JobSpy's scrape_jobs function with Indeed-specific parameters.
         """
         try:
+            # Log the API call details for debugging
+            self._log_indeed_api_call(search_params)
+            
             jobs_df = scrape_jobs(**search_params)
+            
+            # Log the result to terminal
+            if not jobs_df.empty:
+                print(f"✅ Indeed API returned {len(jobs_df)} jobs")
+                logging.info(f"Indeed API returned {len(jobs_df)} jobs")
+            else:
+                print("⚠️ Indeed API returned no jobs")
+                logging.warning("Indeed API returned no jobs")
+            
             return jobs_df if not jobs_df.empty else pd.DataFrame()
         except Exception as e:
-            # Log the error but return empty DataFrame so base class can handle it
-            print(f"JobSpy API call failed: {str(e)}")
+            # Enhanced error logging with specific error types
+            error_str = str(e)
+            
+            if "Read timed out" in error_str or "timeout" in error_str.lower():
+                error_msg = "⏱️ Indeed API request timed out. This may be due to high traffic or network issues."
+                print(f"❌ {error_msg}")
+                print("💡 Suggestion: Try again with fewer results or add a proxy for better connectivity.")
+            elif "HTTPSConnectionPool" in error_str:
+                error_msg = "🌐 Network connection issue when reaching Indeed API."
+                print(f"❌ {error_msg}")
+                print("💡 Suggestion: Check your internet connection or try using a proxy.")
+            elif "429" in error_str or "rate limit" in error_str.lower():
+                error_msg = "🚫 Indeed API rate limit exceeded."
+                print(f"❌ {error_msg}")
+                print("💡 Suggestion: Wait a few minutes before trying again, or configure proxies for rate limiting.")
+            else:
+                error_msg = f"JobSpy API call failed: {error_str}"
+                print(f"❌ {error_msg}")
+            
+            # Log to console for debugging
+            logging.error(f"Indeed API Error: {error_str}")
+            logging.error(f"Search params: {search_params}")
             return pd.DataFrame()
+    
+    def _log_indeed_api_call(self, search_params: Dict[str, Any]) -> None:
+        """
+        Log the Indeed API call details for debugging.
+        Shows what parameters are being sent to JobSpy/Indeed.
+        """
+        # Create a readable summary of the API call
+        log_info = []
+        log_info.append("🔍 **Indeed API Call Details:**")
+        
+        # Basic parameters
+        if 'search_term' in search_params:
+            log_info.append(f"• Search Term: `{search_params['search_term']}`")
+        
+        if 'location' in search_params:
+            log_info.append(f"• Location: `{search_params['location']}`")
+        
+        if 'country_indeed' in search_params:
+            log_info.append(f"• Country: `{search_params['country_indeed']}`")
+            
+        if 'hours_old' in search_params:
+            log_info.append(f"• Hours Old: `{search_params['hours_old']}`")
+            
+        if 'results_wanted' in search_params:
+            log_info.append(f"• Results Wanted: `{search_params['results_wanted']}`")
+        
+        # Site info
+        if 'site_name' in search_params:
+            sites = ', '.join(search_params['site_name']) if isinstance(search_params['site_name'], list) else search_params['site_name']
+            log_info.append(f"• Site: `{sites}`")
+        
+        # Proxy info
+        if 'proxies' in search_params and search_params['proxies']:
+            proxy_count = len(search_params['proxies']) if isinstance(search_params['proxies'], list) else 1
+            log_info.append(f"• Proxies: `{proxy_count} configured`")
+        
+        # Show the constructed Indeed URL (approximate)
+        indeed_url = self._construct_indeed_url_preview(search_params)
+        log_info.append(f"• **Approximate Indeed URL:** `{indeed_url}`")
+        
+        # Log to terminal/console instead of UI
+        print("\n" + "="*60)
+        for line in log_info:
+            # Clean up markdown formatting for terminal
+            clean_line = line.replace('**', '').replace('`', '')
+            print(clean_line)
+        print("="*60 + "\n")
+        
+        # Also log to logging system for debugging
+        logging.info("Indeed API Call: " + " | ".join([line.replace('• ', '').replace('**', '').replace('`', '') for line in log_info[1:]]))
+    
+    def _construct_indeed_url_preview(self, search_params: Dict[str, Any]) -> str:
+        """
+        Construct an approximate Indeed URL for debugging purposes.
+        This shows what the underlying API call would look like.
+        """
+        base_url = "https://www.indeed.com/jobs"
+        params = []
+        
+        # Add search term (URL encoded)
+        if 'search_term' in search_params:
+            encoded_term = urllib.parse.quote_plus(search_params['search_term'])
+            params.append(f"q={encoded_term}")
+        
+        # Add location (URL encoded)
+        if 'location' in search_params:
+            encoded_location = urllib.parse.quote_plus(search_params['location'])
+            params.append(f"l={encoded_location}")
+        elif 'country_indeed' in search_params:
+            encoded_country = urllib.parse.quote_plus(search_params['country_indeed'])
+            params.append(f"l={encoded_country}")
+        
+        # Add time filter
+        if 'hours_old' in search_params:
+            hours = search_params['hours_old']
+            if hours <= 24:
+                params.append("fromage=1")  # Last 24 hours
+            elif hours <= 72:
+                params.append("fromage=3")  # Last 3 days  
+            elif hours <= 168:
+                params.append("fromage=7")  # Last week
+            else:
+                params.append("fromage=14") # Last 2 weeks
+        
+        # Add results limit
+        if 'results_wanted' in search_params:
+            params.append(f"limit={min(search_params['results_wanted'], 50)}")  # Indeed limits per page
+        
+        return f"{base_url}?{'&'.join(params)}" if params else base_url
         
     def search_jobs(
         self,
         search_term: str = "",
         where: str = "",
-        remote_level: str = "Fully Remote",
+        include_remote: bool = True,
         salary_currency: str = "Any",
         time_filter: str = "1 week or more",
         results_wanted: int = 1000,
@@ -136,7 +249,7 @@ class IndeedScraper(BaseJobScraper):
         Args:
             search_term: Job title or keywords
             where: "Global" for multi-country search or specific country name
-            remote_level: Remote level 
+            include_remote: Whether to include remote work keywords and API parameters
             salary_currency: Preferred salary currency
             time_filter: Job posting age filter
             results_wanted: Number of jobs to fetch (default: 1000 for maximum results)
@@ -152,7 +265,7 @@ class IndeedScraper(BaseJobScraper):
             'search_term': search_term,
             'where': where,
             'location': where,  # Alias for compatibility
-            'remote_level': remote_level,
+            'include_remote': include_remote,
             'salary_currency': salary_currency,
             'time_filter': time_filter,
             'results_wanted': results_wanted,
@@ -213,8 +326,20 @@ class IndeedScraper(BaseJobScraper):
                 time.sleep(1)
                 
             except Exception as e:
+                error_str = str(e)
+                if "timeout" in error_str.lower():
+                    error_msg = f"⏱️ Timeout searching {country_name}"
+                elif "rate limit" in error_str.lower():
+                    error_msg = f"🚫 Rate limited in {country_name}"
+                else:
+                    error_msg = f"⚠️ Failed to search {country_name}: {error_str[:50]}..."
+                
                 if progress_callback:
-                    progress_callback(f"⚠️ Failed to search {country_name}: {str(e)}", progress_percent)
+                    progress_callback(error_msg, progress_percent)
+                
+                # Log the specific error to terminal and logging system
+                print(f"⚠️ Global search error in {country_name}: {error_str}")
+                logging.warning(f"Global search error in {country_name}: {error_str}")
                 continue
         
         # Combine results
@@ -229,8 +354,13 @@ class IndeedScraper(BaseJobScraper):
                 "metadata": {"search_type": "global", "countries_searched": 0}
             }
         
-        # Concatenate all job DataFrames
-        combined_jobs = pd.concat(all_jobs, ignore_index=True)
+        # Concatenate all job DataFrames (filter out empty ones to avoid warning)
+        non_empty_jobs = [df for df in all_jobs if not df.empty]
+        if not non_empty_jobs:
+            # If all DataFrames were empty, return empty DataFrame
+            combined_jobs = pd.DataFrame()
+        else:
+            combined_jobs = pd.concat(non_empty_jobs, ignore_index=True)
         
         # Remove duplicates based on job_url
         if 'job_url' in combined_jobs.columns:

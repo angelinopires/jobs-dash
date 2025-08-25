@@ -38,7 +38,6 @@ class BaseJobScraper(ABC):
             Dict mapping filter names to support status:
             {
                 'job_type': True,
-                'remote_level': True, 
                 'time_filter': True,
                 'location': True,
                 'salary_min': False,  # Not supported by API
@@ -346,7 +345,6 @@ class FilterCapabilities:
     API_FILTERS = {
         'search_term': 'Job title/keywords search',
         'location': 'Geographic location',
-        'remote_level': 'Remote work level',
         'time_filter': 'Job posting age',
         'results_wanted': 'Number of results to fetch'
     }

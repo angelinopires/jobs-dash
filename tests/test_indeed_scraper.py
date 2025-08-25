@@ -51,7 +51,7 @@ class TestIndeedScraperInheritance(unittest.TestCase):
         
         # Indeed via JobSpy should support these filters
         expected_supported = [
-            'search_term', 'location', 'remote_level', 'time_filter', 'results_wanted'
+            'search_term', 'location', 'time_filter', 'results_wanted'
         ]
         for filter_name in expected_supported:
             self.assertIn(filter_name, supported)
@@ -78,7 +78,7 @@ class TestIndeedScraperAPI(unittest.TestCase):
         filters = {
             'search_term': 'Python Developer',
             'where': 'United States',
-            'remote_level': 'Fully Remote',
+            'include_remote': True,
             'time_filter': 'Past Week',
             'results_wanted': 1000
         }
@@ -102,7 +102,7 @@ class TestIndeedScraperAPI(unittest.TestCase):
         """Test remote-specific parameter building."""
         filters = {
             'search_term': 'Developer',
-            'remote_level': 'Fully Remote'
+            'include_remote': True
         }
         
         params = self.scraper._build_api_search_params(**filters)
@@ -381,7 +381,7 @@ class TestIndeedScraperIntegration(unittest.TestCase):
         result = self.scraper.search_jobs(
             search_term="Python Developer",
             where="United States",
-            remote_level="Fully Remote",
+            include_remote=True,
             salary_currency="USD",
             time_filter="Past Week",
             results_wanted=1000

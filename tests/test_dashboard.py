@@ -31,7 +31,7 @@ class TestSearchHistory(unittest.TestCase):
             "search_term": "Python Developer",
             "where": "Global",
             "filters": {
-                "remote_level": "Fully Remote",
+                "include_remote": True,
                 "time_filter": "Past Week"
             },
             "results_summary": {
@@ -67,7 +67,7 @@ class TestSearchHistory(unittest.TestCase):
             "timestamp": "2024-01-01T00:00:00",
             "search_term": "NonExistent Job",
             "where": "Mars",
-            "filters": {"remote_level": "Fully Remote"},
+            "filters": {"include_remote": True},
             "results_summary": {"jobs_found": 0, "search_time": 1.0},
             "jobs_data": [],
             "display_title": "NonExistent Job (Mars) - 0 jobs"
@@ -86,7 +86,7 @@ class TestSearchHistory(unittest.TestCase):
         # Test nested structures
         self.assertIn("jobs_found", self.sample_history_item["results_summary"])
         self.assertIn("search_time", self.sample_history_item["results_summary"])
-        self.assertIn("remote_level", self.sample_history_item["filters"])
+        self.assertIn("include_remote", self.sample_history_item["filters"])
     
     def test_display_title_format(self):
         """Test that display title is formatted correctly."""

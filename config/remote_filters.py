@@ -24,13 +24,6 @@ JOB_TYPES: Dict[str, Tuple[str, str]] = {
     "Part-time": ("Part-time", "parttime"),
 }
 
-# Remote level options
-REMOTE_LEVELS: Dict[str, Tuple[str, str]] = {
-    "Fully Remote": ("Fully Remote", "FULLY_REMOTE"),
-    "Hybrid": ("Hybrid/Flexible", "HYBRID"),
-    "Any": ("Any Remote Level", "ANY"),
-}
-
 # Global search countries (in priority order)
 GLOBAL_COUNTRIES: List[Tuple[str, str, str]] = [
     ("🇺🇸", "United States", "usa"),
@@ -71,16 +64,6 @@ def get_job_type_code(job_type_name: str) -> str:
     if job_type_name in JOB_TYPES:
         return JOB_TYPES[job_type_name][1]
     return "ANY"
-
-def get_remote_level_options() -> List[str]:
-    """Get list of remote level display names for dropdown."""
-    return list(REMOTE_LEVELS.keys())
-
-def get_remote_level_code(remote_level_name: str) -> str:
-    """Get remote level code from display name."""
-    if remote_level_name in REMOTE_LEVELS:
-        return REMOTE_LEVELS[remote_level_name][1]
-    return "FULLY_REMOTE"
 
 def get_global_countries() -> List[Tuple[str, str, str]]:
     """Get list of global countries for remote job search."""
