@@ -107,9 +107,9 @@ def run_quick_nan_check():
         # Import functions
         sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
         from dashboard import clean_display_value, clean_company_info
-        from scrapers.indeed_scraper import IndeedScraper
+        from scrapers.optimized_indeed_scraper import get_indeed_scraper
         
-        scraper = IndeedScraper()
+        scraper = get_indeed_scraper()
         
         # Test common problematic values
         problematic_values = ['nan', 'none', 'null', None, '', '   ']

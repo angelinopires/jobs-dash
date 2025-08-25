@@ -11,8 +11,8 @@ from unittest.mock import Mock, patch, MagicMock
 from typing import Dict, Any
 
 # Import the scrapers
-from scrapers.base_scraper import BaseJobScraper
-from scrapers.indeed_scraper import IndeedScraper
+from scrapers.base_scraper import BaseScraper
+from scrapers.optimized_indeed_scraper import get_indeed_scraper, OptimizedIndeedScraper
 
 
 class TestIndeedScraperInheritance(unittest.TestCase):
@@ -20,17 +20,17 @@ class TestIndeedScraperInheritance(unittest.TestCase):
     
     def setUp(self):
         """Set up test fixtures."""
-        self.scraper = IndeedScraper()
+        self.scraper = get_indeed_scraper()
     
     def test_inheritance(self):
-        """Test that IndeedScraper inherits from BaseJobScraper."""
-        self.assertIsInstance(self.scraper, BaseJobScraper)
-        self.assertIsInstance(self.scraper, IndeedScraper)
+        """Test that IndeedScraper inherits from BaseScraper."""
+        self.assertIsInstance(self.scraper, BaseScraper)
+        self.assertIsInstance(self.scraper, OptimizedIndeedScraper)
     
     def test_abstract_methods_implemented(self):
         """Test that all abstract methods are implemented."""
         # Should not raise TypeError (which would happen if abstract methods weren't implemented)
-        scraper = IndeedScraper()
+        scraper = get_indeed_scraper()
         
         # Check that required methods exist and are callable
         self.assertTrue(hasattr(scraper, 'get_supported_api_filters'))
@@ -71,7 +71,7 @@ class TestIndeedScraperAPI(unittest.TestCase):
     
     def setUp(self):
         """Set up test fixtures."""
-        self.scraper = IndeedScraper()
+        self.scraper = get_indeed_scraper()
     
     def test_build_api_search_params_basic(self):
         """Test building basic API search parameters."""
@@ -154,7 +154,7 @@ class TestIndeedScraperAPI(unittest.TestCase):
         self.assertEqual(len(result), 1)
         self.assertEqual(result.iloc[0]['title'], 'Python Developer')
     
-    @patch('scrapers.indeed_scraper.scrape_jobs')
+    @patch('scrapers.optimized_indeed_scraper.scrape_jobs')
     def test_call_scraping_api_failure(self, mock_scrape_jobs):
         """Test API call failure handling."""
         # Mock API failure
@@ -173,9 +173,9 @@ class TestIndeedScraperSearchTime(unittest.TestCase):
     
     def setUp(self):
         """Set up test fixtures."""
-        self.scraper = IndeedScraper()
+        self.scraper = get_indeed_scraper()
     
-    @patch('scrapers.indeed_scraper.scrape_jobs')
+    @patch('scrapers.optimized_indeed_scraper.scrape_jobs')
     def test_single_country_search_includes_search_time(self, mock_scrape_jobs):
         """Test that single country search includes search_time."""
         # Mock empty response
@@ -191,7 +191,7 @@ class TestIndeedScraperSearchTime(unittest.TestCase):
         self.assertIsInstance(result['search_time'], (int, float))
         self.assertGreater(result['search_time'], 0)
     
-    @patch.object(IndeedScraper, '_search_global_remote_jobs')
+    @patch.object(get_indeed_scraper().__class__, '_search_global_optimized')
     def test_global_search_includes_search_time(self, mock_global_search):
         """Test that global search includes search_time."""
         # Mock global search response
@@ -213,24 +213,23 @@ class TestIndeedScraperSearchTime(unittest.TestCase):
         self.assertIn('search_time', result)
         self.assertEqual(result['search_time'], 1.5)
     
-    @patch('scrapers.indeed_scraper.get_global_countries')
-    @patch.object(BaseJobScraper, 'search_jobs')
+    @patch('scrapers.optimized_indeed_scraper.get_global_countries')
+    @patch.object(BaseScraper, 'search_jobs')
     def test_global_search_empty_results_includes_search_time(self, mock_base_search, mock_global_countries):
         """Test that global search with no results still includes search_time."""
         # Mock no global countries
         mock_global_countries.return_value = []
         
-        # Call the actual _search_global_remote_jobs method
-        filters = {'search_term': 'Python', 'where': 'Global'}
-        result = self.scraper._search_global_remote_jobs(filters)
+        # Call the actual _search_global_optimized method
+        result = self.scraper._search_global_optimized('Python', True, None)
         
         # Should include search_time even with no results
         self.assertIn('search_time', result)
         self.assertIsInstance(result['search_time'], (int, float))
         self.assertGreater(result['search_time'], 0)
     
-    @patch('scrapers.indeed_scraper.get_global_countries')
-    @patch.object(BaseJobScraper, 'search_jobs')
+    @patch('scrapers.optimized_indeed_scraper.get_global_countries')
+    @patch.object(BaseScraper, 'search_jobs')
     def test_global_search_with_results_includes_search_time(self, mock_base_search, mock_global_countries):
         """Test that global search with results includes search_time."""
         # Mock some global countries
@@ -253,9 +252,8 @@ class TestIndeedScraperSearchTime(unittest.TestCase):
             "message": "Found 1 job"
         }
         
-        # Call the actual _search_global_remote_jobs method
-        filters = {'search_term': 'Python', 'where': 'Global'}
-        result = self.scraper._search_global_remote_jobs(filters)
+        # Call the actual _search_global_optimized method
+        result = self.scraper._search_global_optimized('Python', True, None)
         
         # Should include search_time
         self.assertIn('search_time', result)
@@ -268,7 +266,7 @@ class TestIndeedScraperJobProcessing(unittest.TestCase):
     
     def setUp(self):
         """Set up test fixtures."""
-        self.scraper = IndeedScraper()
+        self.scraper = get_indeed_scraper()
         
         # Sample raw JobSpy data (what comes from the API)
         self.raw_jobs = pd.DataFrame({
@@ -326,16 +324,20 @@ class TestIndeedScraperJobProcessing(unittest.TestCase):
         # Should have salary_formatted column
         self.assertIn('salary_formatted', result.columns)
         
-        # First job has min and max
-        salary1 = result.iloc[0]['salary_formatted']
-        self.assertIn('80,000', salary1)
-        self.assertIn('120,000', salary1)
-        self.assertIn('USD', salary1)
+        # Find jobs by their titles since sorting may reorder them
+        python_job = result[result['title'] == 'Python Developer'].iloc[0]
+        js_job = result[result['title'] == 'JavaScript Engineer'].iloc[0]
         
-        # Second job has only max
-        salary2 = result.iloc[1]['salary_formatted']
-        self.assertIn('90,000', salary2)
-        self.assertIn('Up to', salary2)
+        # Python job has min and max
+        python_salary = python_job['salary_formatted']
+        self.assertIn('80,000', python_salary)
+        self.assertIn('120,000', python_salary)
+        self.assertIn('USD', python_salary)
+        
+        # JS job has only max
+        js_salary = js_job['salary_formatted']
+        self.assertIn('90,000', js_salary)
+        self.assertIn('Up to', js_salary)
     
     def test_process_jobs_formats_dates(self):
         """Test date formatting from various formats."""
@@ -359,9 +361,9 @@ class TestIndeedScraperIntegration(unittest.TestCase):
     
     def setUp(self):
         """Set up test fixtures."""
-        self.scraper = IndeedScraper()
+        self.scraper = get_indeed_scraper()
     
-    @patch('scrapers.indeed_scraper.scrape_jobs')
+    @patch('scrapers.optimized_indeed_scraper.scrape_jobs')
     def test_end_to_end_search_result_format(self, mock_scrape_jobs):
         """Test that the complete search result has the expected format."""
         # Mock JobSpy response

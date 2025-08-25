@@ -12,7 +12,7 @@ import os
 # Add the parent directory to sys.path to import scraper classes
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from scrapers.indeed_scraper import IndeedScraper
+from scrapers.optimized_indeed_scraper import get_indeed_scraper
 
 
 class TestIndeedScraperFormatting(unittest.TestCase):
@@ -20,7 +20,7 @@ class TestIndeedScraperFormatting(unittest.TestCase):
     
     def setUp(self):
         """Set up test fixtures."""
-        self.scraper = IndeedScraper()
+        self.scraper = get_indeed_scraper()
     
     def test_format_company_info_valid_data(self):
         """Test _format_company_info with valid company data."""
@@ -160,7 +160,7 @@ class TestIndeedScraperFormattingIntegration(unittest.TestCase):
     
     def setUp(self):
         """Set up test fixtures."""
-        self.scraper = IndeedScraper()
+        self.scraper = get_indeed_scraper()
     
     def test_process_jobs_with_nan_data(self):
         """Test that _process_jobs handles nan company data properly."""
@@ -236,7 +236,7 @@ class TestFormattingPreventionSuite(unittest.TestCase):
     
     def setUp(self):
         """Set up test fixtures."""
-        self.scraper = IndeedScraper()
+        self.scraper = get_indeed_scraper()
     
     def test_all_formatting_functions_handle_nan(self):
         """Test that all formatting functions properly handle nan values."""
@@ -257,8 +257,8 @@ class TestFormattingPreventionSuite(unittest.TestCase):
             
             # Test salary formatting
             salary_row = {
-                'min_amount': nan_value if nan_value not in ['nan', 'NaN', 'none', 'None', 'null', 'NULL', 'n/a', 'N/A'] else None,
-                'max_amount': nan_value if nan_value not in ['nan', 'NaN', 'none', 'None', 'null', 'NULL', 'n/a', 'N/A'] else None,
+                'min_amount': nan_value if nan_value not in ['nan', 'NaN', 'none', 'None', 'null', 'NULL', 'n/a', 'N/A'] and not pd.isna(nan_value) else None,
+                'max_amount': nan_value if nan_value not in ['nan', 'NaN', 'none', 'None', 'null', 'NULL', 'n/a', 'N/A'] and not pd.isna(nan_value) else None,
                 'currency': nan_value,
                 'interval': nan_value
             }

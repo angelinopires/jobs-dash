@@ -3,12 +3,13 @@ Enhanced Job Dashboard - Indeed Focused
 A comprehensive job search dashboard with enhanced Indeed scraper support.
 """
 
+import warnings
 import streamlit as st
 import pandas as pd
 from datetime import datetime
 
-# Import our custom modules
-from scrapers.indeed_scraper import IndeedScraper
+
+from scrapers.optimized_indeed_scraper import get_indeed_scraper
 from config.countries import get_country_options
 from config.remote_filters import (
     get_global_countries_display,
@@ -16,6 +17,7 @@ from config.remote_filters import (
 )
 from utils.time_filters import get_time_filter_options
 from utils.toast import success_toast, error_toast, warning_toast, info_toast
+from utils.constants import INVALID_VALUES
 
 # Configure the Streamlit page
 st.set_page_config(
@@ -33,7 +35,7 @@ if 'search_metadata' not in st.session_state:
 if 'search_history' not in st.session_state:
     st.session_state.search_history = []
 if 'indeed_scraper' not in st.session_state:
-    st.session_state.indeed_scraper = IndeedScraper()
+    st.session_state.indeed_scraper = get_indeed_scraper()
 
 # Clean up old search history format (remove entries with old structure)
 if 'search_history' in st.session_state:
@@ -435,6 +437,8 @@ def _format_posted_date_enhanced(date_value):
     if not date_value or pd.isna(date_value):
         return "N/A"
     
+
+    
     try:
         import datetime as dt
         
@@ -445,7 +449,7 @@ def _format_posted_date_enhanced(date_value):
                 return date_value
             
             # Parse various string formats
-            if date_value.lower() in ['n/a', 'not specified', '']:
+            if date_value.lower() in [v.lower() for v in INVALID_VALUES]:
                 return "N/A"
             
             # Try different parsing approaches
@@ -459,6 +463,9 @@ def _format_posted_date_enhanced(date_value):
                 parsed_date = pd.to_datetime(date_value)
                 return parsed_date.strftime('%b %d, %Y')  # Always date only, no time
             except:
+                # Check if the original value is invalid
+                if str(date_value).lower() in [v.lower() for v in INVALID_VALUES]:
+                    return "N/A"
                 return str(date_value)  # Return as-is if can't parse
         
         elif isinstance(date_value, (int, float)):
@@ -474,9 +481,15 @@ def _format_posted_date_enhanced(date_value):
             return date_value.strftime('%b %d, %Y')  # Date only, no time
         
         else:
+            # Check if the original value is invalid
+            if str(date_value).lower() in [v.lower() for v in INVALID_VALUES]:
+                return "N/A"
             return str(date_value)
             
     except Exception as e:
+        # Check if the original value is invalid
+        if str(date_value).lower() in [v.lower() for v in INVALID_VALUES]:
+            return "N/A"
         return str(date_value) if date_value else "N/A"
 
 
@@ -544,7 +557,7 @@ def clean_display_value(value, default="Not available"):
     # Convert to string and check for common "invalid" values
     str_value = str(value).strip()
     
-    if str_value.lower() in ['nan', 'none', '', 'n/a', 'null']:
+    if str_value.lower() in [v.lower() for v in INVALID_VALUES]:
         return default
     
     return str_value
@@ -559,12 +572,12 @@ def clean_company_info(company_info_str):
     Returns:
         Cleaned string or "Not available" if all parts are invalid
     """
-    if not company_info_str or pd.isna(company_info_str):
+    if pd.isna(company_info_str) or not company_info_str:
         return "Not available"
     
     str_value = str(company_info_str).strip()
     
-    if str_value.lower() in ['nan', 'none', '', 'n/a', 'null']:
+    if str_value.lower() in [v.lower() for v in INVALID_VALUES]:
         return "Not available"
     
     # Split by pipes and clean each part
@@ -577,7 +590,7 @@ def clean_company_info(company_info_str):
             label, value = part.split(':', 1)
             value = value.strip()
             # Check if the value part is valid
-            if value.lower() not in ['nan', 'none', '', 'n/a', 'null']:
+            if value.lower() not in [v.lower() for v in INVALID_VALUES]:
                 cleaned_parts.append(f"{label.strip()}: {value}")
     
     if cleaned_parts:

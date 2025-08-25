@@ -1,9 +1,11 @@
 """
-Test suite for the job scraping dashboard.
+Test suite for the Jobs Dashboard.
 
-This package contains unit tests for:
-- BaseJobScraper abstract class
-- IndeedScraper implementation 
-- Filter architecture (API vs post-processing)
-- Search result format validation
+Contains comprehensive tests for:
+- Core optimization features (caching, performance monitoring)
+- Scraper functionality and formatting
+- Integration tests for end-to-end workflows
+- Regression tests for known issues
+
+Run tests with: python tests/run_tests.py
 """

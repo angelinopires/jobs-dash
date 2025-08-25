@@ -14,7 +14,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from dashboard import clean_display_value, clean_company_info, _format_posted_date_enhanced
-from scrapers.indeed_scraper import IndeedScraper
+from scrapers.optimized_indeed_scraper import get_indeed_scraper
 
 
 class TestNanPreventionSuite(unittest.TestCase):
@@ -23,14 +23,14 @@ class TestNanPreventionSuite(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         """Set up test fixtures for the class."""
-        cls.scraper = IndeedScraper()
+        from scrapers.optimized_indeed_scraper import get_indeed_scraper
+        cls.scraper = get_indeed_scraper()
         
         # Define all possible "invalid" values that should be cleaned
         cls.invalid_values = [
             None,
             np.nan,
             pd.NA,
-            pd.NaType(),
             'nan',
             'NaN', 
             'NAN',
@@ -257,7 +257,7 @@ class TestNanPreventionRegression(unittest.TestCase):
     
     def setUp(self):
         """Set up test fixtures."""
-        self.scraper = IndeedScraper()
+        self.scraper = get_indeed_scraper()
     
     def test_company_info_nan_regression(self):
         """Regression test for the specific company info nan issue."""
