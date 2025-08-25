@@ -19,7 +19,7 @@ import pandas as pd
 
 class CacheManager:
     """
-    Hybrid caching system optimized for Streamlit and production use.
+    Hybrid caching system optimized for Streamlit use.
     
     Features:
     - Session-based cache for fast access

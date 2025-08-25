@@ -62,6 +62,27 @@ class TestCacheManager(unittest.TestCase):
         )
         
         self.assertNotEqual(key1, key3)
+        
+        # Test that time_filter affects cache key
+        key4 = self.cache_manager.generate_cache_key(
+            scraper="indeed",
+            search_term="Software Engineer",
+            country="United States",
+            include_remote=True,
+            time_filter="Last 24h"
+        )
+        
+        key5 = self.cache_manager.generate_cache_key(
+            scraper="indeed",
+            search_term="Software Engineer",
+            country="United States",
+            include_remote=True,
+            time_filter="Last 7 days"
+        )
+        
+        # Different time filters should generate different keys
+        self.assertNotEqual(key4, key5)
+        self.assertNotEqual(key1, key4)  # Should be different from key without time_filter
     
     def test_cache_storage_and_retrieval(self):
         """Test storing and retrieving cached results."""

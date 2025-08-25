@@ -18,6 +18,7 @@ from config.remote_filters import (
 from utils.time_filters import get_time_filter_options
 from utils.toast import success_toast, error_toast, warning_toast, info_toast
 from utils.constants import INVALID_VALUES
+from utils.display_utils import clean_display_value, clean_company_info, format_posted_date_enhanced
 
 # Configure the Streamlit page
 st.set_page_config(
@@ -386,10 +387,10 @@ def apply_display_formatting(jobs_df: pd.DataFrame) -> pd.DataFrame:
     
     # Format posted dates to "Aug 23, 2025 16:47" format
     if 'date_posted' in formatted_df.columns:
-        formatted_df['date_posted_formatted'] = formatted_df['date_posted'].apply(_format_posted_date_enhanced)
+        formatted_df['date_posted_formatted'] = formatted_df['date_posted'].apply(format_posted_date_enhanced)
     elif 'date_posted_formatted' in formatted_df.columns:
         # Re-format existing formatted dates
-        formatted_df['date_posted_formatted'] = formatted_df['date_posted_formatted'].apply(_format_posted_date_enhanced)
+        formatted_df['date_posted_formatted'] = formatted_df['date_posted_formatted'].apply(format_posted_date_enhanced)
     
     # Apply default sorting: Salary (DESC) then Job Title (ASC)
     try:
@@ -424,73 +425,6 @@ def apply_display_formatting(jobs_df: pd.DataFrame) -> pd.DataFrame:
     return formatted_df
 
 
-def _format_posted_date_enhanced(date_value):
-    """
-    Enhanced date formatting to return 'Aug 23, 2025 16:47' format.
-    
-    Args:
-        date_value: Various date formats (string, datetime, timestamp)
-        
-    Returns:
-        Formatted date string like "Aug 23, 2025 16:47"
-    """
-    if not date_value or pd.isna(date_value):
-        return "N/A"
-    
-
-    
-    try:
-        import datetime as dt
-        
-        # Handle different input formats
-        if isinstance(date_value, str):
-            # If it's already in our target format, return as-is
-            if ":" in date_value and any(month in date_value for month in ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']):
-                return date_value
-            
-            # Parse various string formats
-            if date_value.lower() in [v.lower() for v in INVALID_VALUES]:
-                return "N/A"
-            
-            # Try different parsing approaches
-            try:
-                # Handle ISO format dates like "2025-08-23"
-                if '-' in date_value and len(date_value) == 10:
-                    parsed_date = dt.datetime.strptime(date_value, '%Y-%m-%d')
-                    return parsed_date.strftime('%b %d, %Y')  # Date only, no time
-                
-                # Handle other formats
-                parsed_date = pd.to_datetime(date_value)
-                return parsed_date.strftime('%b %d, %Y')  # Always date only, no time
-            except:
-                # Check if the original value is invalid
-                if str(date_value).lower() in [v.lower() for v in INVALID_VALUES]:
-                    return "N/A"
-                return str(date_value)  # Return as-is if can't parse
-        
-        elif isinstance(date_value, (int, float)):
-            # Handle timestamps
-            timestamp = int(date_value)
-            if timestamp > 1e10:  # Milliseconds
-                timestamp = timestamp / 1000
-            date_obj = dt.datetime.fromtimestamp(timestamp)
-            return date_obj.strftime('%b %d, %Y')  # Date only, no time
-        
-        elif hasattr(date_value, 'strftime'):
-            # Already a datetime object
-            return date_value.strftime('%b %d, %Y')  # Date only, no time
-        
-        else:
-            # Check if the original value is invalid
-            if str(date_value).lower() in [v.lower() for v in INVALID_VALUES]:
-                return "N/A"
-            return str(date_value)
-            
-    except Exception as e:
-        # Check if the original value is invalid
-        if str(date_value).lower() in [v.lower() for v in INVALID_VALUES]:
-            return "N/A"
-        return str(date_value) if date_value else "N/A"
 
 
 def _extract_salary_for_sorting(salary_str):
@@ -503,7 +437,7 @@ def _extract_salary_for_sorting(salary_str):
     Returns:
         Numeric value for sorting (highest salaries sort first)
     """
-    if not salary_str or pd.isna(salary_str) or salary_str in ['N/A', 'Not specified', '']:
+    if pd.isna(salary_str) or (salary_str is None) or (isinstance(salary_str, str) and not salary_str.strip()) or salary_str in ['N/A', 'Not specified', '']:
         return 0
     
     try:
@@ -540,63 +474,6 @@ def _extract_salary_for_sorting(salary_str):
     return 0
 
 
-def clean_display_value(value, default="Not available"):
-    """
-    Clean a value for display, handling nan, None, empty strings, etc.
-    
-    Args:
-        value: The value to clean
-        default: Default value to return if the value is invalid
-        
-    Returns:
-        Cleaned string value
-    """
-    if value is None or pd.isna(value):
-        return default
-    
-    # Convert to string and check for common "invalid" values
-    str_value = str(value).strip()
-    
-    if str_value.lower() in [v.lower() for v in INVALID_VALUES]:
-        return default
-    
-    return str_value
-
-def clean_company_info(company_info_str):
-    """
-    Clean company info string that may contain nan values.
-    
-    Args:
-        company_info_str: String like "Industry: nan | Size: nan | Revenue: nan"
-        
-    Returns:
-        Cleaned string or "Not available" if all parts are invalid
-    """
-    if pd.isna(company_info_str) or not company_info_str:
-        return "Not available"
-    
-    str_value = str(company_info_str).strip()
-    
-    if str_value.lower() in [v.lower() for v in INVALID_VALUES]:
-        return "Not available"
-    
-    # Split by pipes and clean each part
-    parts = str_value.split('|')
-    cleaned_parts = []
-    
-    for part in parts:
-        part = part.strip()
-        if ':' in part:
-            label, value = part.split(':', 1)
-            value = value.strip()
-            # Check if the value part is valid
-            if value.lower() not in [v.lower() for v in INVALID_VALUES]:
-                cleaned_parts.append(f"{label.strip()}: {value}")
-    
-    if cleaned_parts:
-        return " | ".join(cleaned_parts)
-    else:
-        return "Not available"
 
 def apply_interactive_filters(jobs_df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -827,7 +704,7 @@ def display_search_results():
                     
                     # Format the posted date using the same function as the table
                     posted_date = selected_job.get('date_posted')
-                    formatted_date = _format_posted_date_enhanced(posted_date)
+                    formatted_date = format_posted_date_enhanced(posted_date)
                     st.markdown(f"**Posted:** {clean_display_value(formatted_date)}")
                     
                     # Remote status

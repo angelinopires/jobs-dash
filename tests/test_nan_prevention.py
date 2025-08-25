@@ -13,7 +13,7 @@ import os
 # Add the parent directory to sys.path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from dashboard import clean_display_value, clean_company_info, _format_posted_date_enhanced
+from utils.display_utils import clean_display_value, clean_company_info, format_posted_date_enhanced
 from scrapers.optimized_indeed_scraper import get_indeed_scraper
 
 
@@ -138,7 +138,7 @@ class TestNanPreventionSuite(unittest.TestCase):
         """Test that date formatting never returns any form of 'nan'."""
         for invalid_value in self.invalid_values:
             with self.subTest(value=invalid_value):
-                result = _format_posted_date_enhanced(invalid_value)
+                result = format_posted_date_enhanced(invalid_value)
                 self.assertNotIn('nan', str(result).lower())
                 self.assertNotIn('none', str(result).lower())
                 self.assertNotIn('null', str(result).lower())
@@ -198,7 +198,7 @@ class TestNanPreventionSuite(unittest.TestCase):
             # All these functions should handle invalid values gracefully
             display_result = clean_display_value(invalid_value)
             company_result = clean_company_info(invalid_value)
-            date_result = _format_posted_date_enhanced(invalid_value)
+            date_result = format_posted_date_enhanced(invalid_value)
             
             # None should contain nan/none/null
             results = [display_result, company_result, date_result]

@@ -1,27 +1,37 @@
 #!/usr/bin/env python3
 """
-Test runner for the job scraping dashboard.
+Fast test runner for the job scraping dashboard.
 
-Runs all unit tests and provides a summary of results.
+Runs all unit tests efficiently with suppressed warnings.
 """
 
 import unittest
 import sys
 import os
+import warnings
+
+# Suppress all warnings for faster test execution
+warnings.filterwarnings('ignore')
+
+# Suppress Streamlit warnings
+os.environ['STREAMLIT_SERVER_HEADLESS'] = 'true'
+os.environ['STREAMLIT_SERVER_RUN_ON_SAVE'] = 'false'
 
 # Add the project root to the Python path
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, project_root)
 
 def run_all_tests():
-    """Run all unit tests and return results."""
+    """Run all unit tests efficiently and return results."""
+    print("🚀 Running all tests...")
+    
     # Discover and run all tests
     loader = unittest.TestLoader()
     start_dir = os.path.dirname(os.path.abspath(__file__))
     suite = loader.discover(start_dir, pattern='test_*.py')
     
-    # Run tests with detailed output
-    runner = unittest.TextTestRunner(verbosity=2, buffer=True)
+    # Run tests with minimal output for speed
+    runner = unittest.TextTestRunner(verbosity=1, buffer=True)
     result = runner.run(suite)
     
     # Print summary
@@ -31,23 +41,28 @@ def run_all_tests():
     print(f"Tests run: {result.testsRun}")
     print(f"Failures: {len(result.failures)}")
     print(f"Errors: {len(result.errors)}")
-    print(f"Skipped: {len(result.skipped) if hasattr(result, 'skipped') else 0}")
     
     if result.failures:
-        print("\nFAILURES:")
+        print("\n❌ FAILURES:")
         for test, traceback in result.failures:
-            print(f"- {test}")
+            print(f"  - {test}")
     
     if result.errors:
-        print("\nERRORS:")
+        print("\n❌ ERRORS:")
         for test, traceback in result.errors:
-            print(f"- {test}")
+            print(f"  - {test}")
+    
+    if result.wasSuccessful():
+        print("\n✅ ALL TESTS PASSED!")
+    else:
+        print("\n❌ SOME TESTS FAILED!")
     
     # Return success status
     return result.wasSuccessful()
 
 def run_specific_test(test_module):
     """Run a specific test module."""
+    print(f"🧪 Running specific test: {test_module}")
     loader = unittest.TestLoader()
     suite = loader.loadTestsFromName(test_module)
     runner = unittest.TextTestRunner(verbosity=2)

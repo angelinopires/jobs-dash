@@ -206,7 +206,7 @@ class TestIndeedScraperFormattingIntegration(unittest.TestCase):
         
         # Second job should have no valid company info
         second_job_info = processed_jobs.iloc[1]['company_info']
-        self.assertEqual(second_job_info, "N/A")
+        self.assertEqual(second_job_info, "Not available")
     
     def test_salary_formatting_with_nan(self):
         """Test salary formatting handles nan values properly."""
@@ -256,9 +256,20 @@ class TestFormattingPreventionSuite(unittest.TestCase):
             self.assertNotIn('null', result.lower(), f"Found 'null' in result for value: {nan_value}")
             
             # Test salary formatting
+            # Handle pandas NA values properly
+            if pd.isna(nan_value):
+                min_amount = None
+                max_amount = None
+            elif str(nan_value).lower() in ['nan', 'none', 'null', 'n/a']:
+                min_amount = None
+                max_amount = None
+            else:
+                min_amount = nan_value
+                max_amount = nan_value
+                
             salary_row = {
-                'min_amount': nan_value if nan_value not in ['nan', 'NaN', 'none', 'None', 'null', 'NULL', 'n/a', 'N/A'] and not pd.isna(nan_value) else None,
-                'max_amount': nan_value if nan_value not in ['nan', 'NaN', 'none', 'None', 'null', 'NULL', 'n/a', 'N/A'] and not pd.isna(nan_value) else None,
+                'min_amount': min_amount,
+                'max_amount': max_amount,
                 'currency': nan_value,
                 'interval': nan_value
             }

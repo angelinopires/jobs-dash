@@ -21,6 +21,9 @@ from core.base_scraper import BaseScraper
 from core.base_optimizer import SearchOptimizer
 from utils.constants import INVALID_VALUES
 
+# Import display functions for cleaning
+from utils.display_utils import clean_display_value
+
 # Existing config imports
 from config.countries import get_indeed_country_name
 from config.remote_filters import get_global_countries
@@ -212,21 +215,22 @@ class OptimizedIndeedScraper(BaseScraper):
         
         # Clean company names
         if 'company' in processed_jobs.columns:
-            processed_jobs['company'] = processed_jobs['company'].fillna("Not specified")
-            processed_jobs['company'] = processed_jobs['company'].replace('', "Not specified")
+            processed_jobs['company'] = processed_jobs['company'].apply(
+                lambda x: clean_display_value(x, "Not specified")
+            )
             # Create company_name alias for dashboard compatibility
             processed_jobs['company_name'] = processed_jobs['company']
         
         # Format location
         if 'location' in processed_jobs.columns:
             processed_jobs['location_formatted'] = processed_jobs['location'].apply(
-                self._format_location
+                lambda x: clean_display_value(self._format_location(x))
             )
         
         # Format salary information
         if 'min_amount' in processed_jobs.columns or 'max_amount' in processed_jobs.columns:
             processed_jobs['salary_formatted'] = processed_jobs.apply(
-                self._format_salary_from_columns, axis=1
+                lambda row: clean_display_value(self._format_salary_from_columns(row)), axis=1
             )
         else:
             processed_jobs['salary_formatted'] = "Not specified"
@@ -234,12 +238,12 @@ class OptimizedIndeedScraper(BaseScraper):
         # Format posted date
         if 'date_posted' in processed_jobs.columns:
             processed_jobs['date_posted_formatted'] = processed_jobs['date_posted'].apply(
-                self._format_posted_date
+                lambda x: clean_display_value(self._format_posted_date(x))
             )
         
         # Format company information
         processed_jobs['company_info'] = processed_jobs.apply(
-            self._format_company_info, axis=1
+            lambda row: clean_display_value(self._format_company_info(row)), axis=1
         )
         
         return processed_jobs

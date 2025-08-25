@@ -33,7 +33,8 @@ def test_cache_system():
         scraper="indeed",
         search_term="Python Developer",
         country="United States",
-        include_remote=True
+        include_remote=True,
+        time_filter="Last 24h"
     )
     
     print(f"✅ Cache key generated: {key[:20]}...")

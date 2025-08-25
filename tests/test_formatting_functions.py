@@ -12,7 +12,8 @@ import os
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, project_root)
 
-from dashboard import apply_display_formatting, _format_posted_date_enhanced, _extract_salary_for_sorting
+from dashboard import apply_display_formatting, _extract_salary_for_sorting
+from utils.display_utils import format_posted_date_enhanced
 
 
 class TestDisplayFormatting(unittest.TestCase):
@@ -72,27 +73,27 @@ class TestDateFormatting(unittest.TestCase):
     
     def test_iso_date_formatting(self):
         """Test formatting of ISO date strings."""
-        result = _format_posted_date_enhanced('2024-01-15')
+        result = format_posted_date_enhanced('2024-01-15')
         self.assertEqual(result, 'Jan 15, 2024')
     
     def test_na_values(self):
         """Test handling of N/A values."""
         test_cases = ['N/A', 'n/a', '', None]
         for test_case in test_cases:
-            result = _format_posted_date_enhanced(test_case)
+            result = format_posted_date_enhanced(test_case)
             self.assertEqual(result, 'N/A')
     
     def test_timestamp_formatting(self):
         """Test formatting of timestamps."""
         # Unix timestamp for Jan 15, 2024
         timestamp = 1705276800
-        result = _format_posted_date_enhanced(timestamp)
+        result = format_posted_date_enhanced(timestamp)
         self.assertIn('2024', result)
         self.assertIn('Jan', result)
     
     def test_invalid_date_handling(self):
         """Test handling of invalid date strings."""
-        result = _format_posted_date_enhanced('invalid_date')
+        result = format_posted_date_enhanced('invalid_date')
         self.assertEqual(result, 'invalid_date')
 
 

@@ -127,12 +127,16 @@ class BaseScraper(ABC):
     ) -> Dict[str, Any]:
         """Optimized single-country search with caching."""
         
+        # Filter out function references from kwargs to avoid JSON serialization issues
+        filtered_kwargs = {k: v for k, v in kwargs.items() if not callable(v)}
+        
         # Check cache first
         cache_key = self.cache_manager.generate_cache_key(
             scraper=self.scraper_name,
             search_term=search_term,
             country=country,
-            include_remote=include_remote
+            include_remote=include_remote,
+            **filtered_kwargs
         )
         
         cached_result = self.cache_manager.get_cached_result(cache_key)
@@ -148,13 +152,13 @@ class BaseScraper(ABC):
         # Rate limiting
         self._apply_rate_limiting()
         
-        # Build API parameters
+        # Build API parameters (filter out function references)
         filters = {
             'search_term': search_term,
             'where': country,
             'location': country,
             'include_remote': include_remote,
-            **kwargs
+            **filtered_kwargs
         }
         
         api_params = self._build_api_search_params(**filters)

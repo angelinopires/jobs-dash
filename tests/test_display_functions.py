@@ -12,7 +12,7 @@ import os
 # Add the parent directory to sys.path to import dashboard functions
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from dashboard import clean_display_value, clean_company_info
+from utils.display_utils import clean_display_value, clean_company_info
 
 
 class TestDisplayFunctions(unittest.TestCase):
