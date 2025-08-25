@@ -293,7 +293,7 @@ class IndeedScraper(BaseJobScraper):
         if progress_callback:
             progress_callback("Starting global remote job search...", 0.1)
         
-        for i, (flag, country_name, country_code) in enumerate(global_countries):
+        for i, (country_name, country_code) in enumerate(global_countries):
             try:
                 # Update progress - show 100% when searching the last country
                 if i == len(global_countries) - 1:
@@ -304,7 +304,7 @@ class IndeedScraper(BaseJobScraper):
                     progress_percent = 0.1 + ((i + 0.5) / len(global_countries)) * 0.85  # 10% to 95%
                 
                 if progress_callback:
-                    progress_callback(f"Searching {flag} {country_name} ({i+1}/{len(global_countries)})...", progress_percent)
+                    progress_callback(f"Searching {country_name} ({i+1}/{len(global_countries)})...", progress_percent)
                 
                 # Create country-specific filters
                 country_filters = filters.copy()
@@ -317,7 +317,6 @@ class IndeedScraper(BaseJobScraper):
                 if country_result["success"] and country_result["jobs"] is not None:
                     # Add country metadata to jobs
                     country_jobs = country_result["jobs"].copy()
-                    country_jobs["country_flag"] = flag
                     country_jobs["country_name"] = country_name 
                     country_jobs["country_code"] = country_code
                     all_jobs.append(country_jobs)
@@ -600,16 +599,28 @@ class IndeedScraper(BaseJobScraper):
     
     def _format_company_info(self, row):
         """Format company information for display."""
+        import pandas as pd
+        
         info_parts = []
         
-        if row.get('company_industry'):
-            info_parts.append(f"Industry: {row['company_industry']}")
+        # Helper function to check if value is valid
+        def is_valid_value(value):
+            if value is None or pd.isna(value):
+                return False
+            str_value = str(value).strip().lower()
+            return str_value not in ['nan', 'none', '', 'n/a', 'null']
         
-        if row.get('company_num_employees'):
-            info_parts.append(f"Size: {row['company_num_employees']}")
+        industry = row.get('company_industry')
+        if industry and is_valid_value(industry):
+            info_parts.append(f"Industry: {industry}")
         
-        if row.get('company_revenue'):
-            info_parts.append(f"Revenue: {row['company_revenue']}")
+        size = row.get('company_num_employees')
+        if size and is_valid_value(size):
+            info_parts.append(f"Size: {size}")
+        
+        revenue = row.get('company_revenue')
+        if revenue and is_valid_value(revenue):
+            info_parts.append(f"Revenue: {revenue}")
         
         return " | ".join(info_parts) if info_parts else "N/A"
     

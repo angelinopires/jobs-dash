@@ -527,6 +527,64 @@ def _extract_salary_for_sorting(salary_str):
     return 0
 
 
+def clean_display_value(value, default="Not available"):
+    """
+    Clean a value for display, handling nan, None, empty strings, etc.
+    
+    Args:
+        value: The value to clean
+        default: Default value to return if the value is invalid
+        
+    Returns:
+        Cleaned string value
+    """
+    if value is None or pd.isna(value):
+        return default
+    
+    # Convert to string and check for common "invalid" values
+    str_value = str(value).strip()
+    
+    if str_value.lower() in ['nan', 'none', '', 'n/a', 'null']:
+        return default
+    
+    return str_value
+
+def clean_company_info(company_info_str):
+    """
+    Clean company info string that may contain nan values.
+    
+    Args:
+        company_info_str: String like "Industry: nan | Size: nan | Revenue: nan"
+        
+    Returns:
+        Cleaned string or "Not available" if all parts are invalid
+    """
+    if not company_info_str or pd.isna(company_info_str):
+        return "Not available"
+    
+    str_value = str(company_info_str).strip()
+    
+    if str_value.lower() in ['nan', 'none', '', 'n/a', 'null']:
+        return "Not available"
+    
+    # Split by pipes and clean each part
+    parts = str_value.split('|')
+    cleaned_parts = []
+    
+    for part in parts:
+        part = part.strip()
+        if ':' in part:
+            label, value = part.split(':', 1)
+            value = value.strip()
+            # Check if the value part is valid
+            if value.lower() not in ['nan', 'none', '', 'n/a', 'null']:
+                cleaned_parts.append(f"{label.strip()}: {value}")
+    
+    if cleaned_parts:
+        return " | ".join(cleaned_parts)
+    else:
+        return "Not available"
+
 def apply_interactive_filters(jobs_df: pd.DataFrame) -> pd.DataFrame:
     """
     Apply interactive post-processing filters above the results table.
@@ -541,7 +599,7 @@ def apply_interactive_filters(jobs_df: pd.DataFrame) -> pd.DataFrame:
     st.markdown("### 🎛️ Filter Results")
     st.markdown("*Adjust these filters to refine your search results without re-scraping*")
     
-    filter_col1, filter_col2, filter_col3, filter_col4 = st.columns(4)
+    filter_col1, filter_col2, filter_col3, filter_col4, filter_col5 = st.columns(5)
     
     # Initialize filtered dataframe
     filtered_df = jobs_df.copy()
@@ -605,6 +663,27 @@ def apply_interactive_filters(jobs_df: pd.DataFrame) -> pd.DataFrame:
             filtered_df = filter_by_salary_range(filtered_df, selected_salary_range)
     
     with filter_col4:
+        # Location Filter
+        if 'location_formatted' in filtered_df.columns:
+            available_locations = filtered_df['location_formatted'].dropna().unique().tolist()
+            # Remove 'N/A' values and sort
+            available_locations = sorted([loc for loc in available_locations if loc and loc != 'N/A'])
+        else:
+            available_locations = []
+        
+        selected_locations = st.multiselect(
+            "📍 Location",
+            options=available_locations,
+            default=[],
+            key="location_filter",
+            help="Filter jobs by location (select multiple)"
+        )
+        
+        # Apply location filter
+        if selected_locations and 'location_formatted' in filtered_df.columns:
+            filtered_df = filtered_df[filtered_df['location_formatted'].isin(selected_locations)]
+    
+    with filter_col5:
         # Job Type Filter - use pre-calculated available options
         selected_job_types = st.multiselect(
             "💼 Job Type",
@@ -729,28 +808,48 @@ def display_search_results():
                 col1, col2 = st.columns(2)
                 
                 with col1:
-                    st.markdown(f"**Job Title:** {selected_job.get('title', 'N/A')}")
-                    st.markdown(f"**Company:** {selected_job.get('company_name', 'N/A')}")
-                    st.markdown(f"**Location:** {selected_job.get('location_formatted', 'N/A')}")
-                    st.markdown(f"**Posted:** {selected_job.get('date_posted', 'N/A')}")
-                    st.markdown(f"**Remote:** {'Yes' if selected_job.get('is_remote') else 'No'}")
+                    st.markdown(f"**Job Title:** {clean_display_value(selected_job.get('title'))}")
+                    st.markdown(f"**Company:** {clean_display_value(selected_job.get('company_name'))}")
+                    st.markdown(f"**Location:** {clean_display_value(selected_job.get('location_formatted'))}")
+                    
+                    # Format the posted date using the same function as the table
+                    posted_date = selected_job.get('date_posted')
+                    formatted_date = _format_posted_date_enhanced(posted_date)
+                    st.markdown(f"**Posted:** {clean_display_value(formatted_date)}")
+                    
+                    # Remote status
+                    is_remote = selected_job.get('is_remote', False)
+                    remote_text = 'Yes' if is_remote else 'No'
+                    st.markdown(f"**Remote:** {remote_text}")
                 
                 with col2:
-                    if 'salary_formatted' in selected_job and selected_job['salary_formatted'] != 'N/A':
-                        st.markdown(f"**Salary:** {selected_job['salary_formatted']}")
+                    # Salary info
+                    salary = clean_display_value(selected_job.get('salary_formatted'))
+                    if salary != "Not available":
+                        st.markdown(f"**Salary:** {salary}")
                     
-                    if 'company_info' in selected_job and selected_job['company_info'] != 'N/A':
-                        st.markdown(f"**Company Info:** {selected_job['company_info']}")
+                    # Company info (special handling for structured data)
+                    company_info = clean_company_info(selected_job.get('company_info'))
+                    if company_info != "Not available":
+                        st.markdown(f"**Company Info:** {company_info}")
                     
-                    if 'job_url' in selected_job and selected_job['job_url']:
-                        st.markdown(f"**Apply Here:** [View on Indeed]({selected_job['job_url']})")
+                    # Job type
+                    job_type = clean_display_value(selected_job.get('job_type'))
+                    if job_type != "Not available":
+                        st.markdown(f"**Job Type:** {job_type}")
+                    
+                    # Apply link
+                    job_url = selected_job.get('job_url')
+                    if job_url and clean_display_value(job_url) != "Not available":
+                        st.markdown(f"**Apply Here:** [View on Indeed]({job_url})")
                 
                 # Job description
                 st.markdown("---")
                 st.markdown("**Job Description:**")
                 
-                if 'description' in selected_job and selected_job['description']:
-                    st.markdown(selected_job['description'], unsafe_allow_html=True)
+                description = clean_display_value(selected_job.get('description'), default="")
+                if description and description != "Not available":
+                    st.markdown(description, unsafe_allow_html=True)
                 else:
                     st.info("No detailed description available for this job posting.")
 

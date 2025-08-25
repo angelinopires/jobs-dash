@@ -24,15 +24,15 @@ JOB_TYPES: Dict[str, Tuple[str, str]] = {
     "Part-time": ("Part-time", "parttime"),
 }
 
-# Global search countries (in priority order)
-GLOBAL_COUNTRIES: List[Tuple[str, str, str]] = [
-    ("🇺🇸", "United States", "usa"),
-    ("🇨🇦", "Canada", "canada"), 
-    ("🇧🇷", "Brazil", "brazil"),
-    ("🇩🇪", "Germany", "germany"),
-    ("🇳🇱", "Netherlands", "netherlands"),
-    ("🇬🇧", "United Kingdom", "uk"),
-    ("🇦🇺", "Australia", "australia"),
+# Global search countries (in priority order) - format: (country_name, country_code)
+GLOBAL_COUNTRIES: List[Tuple[str, str]] = [
+    ("United States", "usa"),
+    ("Canada", "canada"), 
+    ("Brazil", "brazil"),
+    ("Germany", "germany"),
+    ("Netherlands", "netherlands"),
+    ("United Kingdom", "uk"),
+    ("Australia", "australia"),
 ]
 
 # Remote search keywords to enhance search terms
@@ -65,13 +65,13 @@ def get_job_type_code(job_type_name: str) -> str:
         return JOB_TYPES[job_type_name][1]
     return "ANY"
 
-def get_global_countries() -> List[Tuple[str, str, str]]:
+def get_global_countries() -> List[Tuple[str, str]]:
     """Get list of global countries for remote job search."""
     return GLOBAL_COUNTRIES.copy()
 
 def get_global_countries_display() -> str:
     """Get formatted string of global countries for display."""
-    countries = [f"{flag} {name}" for flag, name, _ in GLOBAL_COUNTRIES]
+    countries = [name for name, _ in GLOBAL_COUNTRIES]
     return ", ".join(countries)
 
 def enhance_search_term_with_remote_keywords(search_term: str) -> str:
@@ -91,8 +91,8 @@ def enhance_search_term_with_remote_keywords(search_term: str) -> str:
     return enhanced_term
 
 def get_country_flag_and_name(country_code: str) -> Tuple[str, str]:
-    """Get country flag and name from country code."""
-    for flag, name, code in GLOBAL_COUNTRIES:
+    """Get country name from country code."""
+    for name, code in GLOBAL_COUNTRIES:
         if code == country_code:
-            return flag, name
-    return "🌍", "Unknown"
+            return "", name  # No flag, just name
+    return "", "Unknown"
