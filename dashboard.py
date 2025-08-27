@@ -8,7 +8,6 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 
-
 from scrapers.optimized_indeed_scraper import get_indeed_scraper
 from config.countries import get_country_options
 from config.remote_filters import (
@@ -22,7 +21,7 @@ from utils.display_utils import clean_display_value, clean_company_info, format_
 
 # Configure the Streamlit page
 st.set_page_config(
-    page_title="Remote Job Dashboard",
+    page_title="Jobs Dash - Your personal job search assistant",
     page_icon="🌍",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -33,23 +32,14 @@ if 'jobs_df' not in st.session_state:
     st.session_state.jobs_df = None
 if 'search_metadata' not in st.session_state:
     st.session_state.search_metadata = None
-if 'search_history' not in st.session_state:
-    st.session_state.search_history = []
 if 'indeed_scraper' not in st.session_state:
     st.session_state.indeed_scraper = get_indeed_scraper()
-
-# Clean up old search history format (remove entries with old structure)
-if 'search_history' in st.session_state:
-    st.session_state.search_history = [
-        item for item in st.session_state.search_history 
-        if 'where' in item or 'timestamp' in item  # Keep new format or at least timestamped items
-    ]
 
 def main():
     """Main dashboard function."""
     
     # Header
-    st.title("🌍 Remote Job Search Dashboard")
+    st.title("🌍 Jobs Dash")
     st.markdown("""
     **Remote-First Job Hunter** - Find the best remote opportunities across global markets.
     
@@ -70,24 +60,31 @@ def main():
         show_welcome_message()
 
 def create_search_sidebar():
-    """Create the remote-first search sidebar."""
-    st.header("🌍 Remote Job Search")
+    """Create search sidebar."""
+    st.header("🌍 Jobs Dash")
     
-    # Search term
+    # Search parameters
     search_term = st.text_input(
-        "Search Term",
+        "Search parameters",
         value="Software Engineer",
-        help="Enter job title or keywords"
+        help="""
+            **Search Tips:**
+            - "Exact Phrase": Searches for the complete phrase.
+            - "-word": Removes results containing a given word.
+            - Example: "Software Engineer" -manager
+                -  It will find jobs for "Software Engineer" but exclude any that also mention "manager".
+            - Extra tip: This search includes both job title and job description.
+        """
     )
     
-    # Remote checkbox
-    include_remote = st.checkbox(
+    # Remote Only
+    include_remote = st.toggle(
         "Remote Only",
         value=True,
         help="Include only remote positions"
     )
     
-    # Where (Global or specific country)
+    # Where
     country_options = get_country_options()
     selected_where = st.selectbox(
         "Where",
@@ -98,10 +95,7 @@ def create_search_sidebar():
     
     # Show countries included in Global search
     if selected_where == "Global":
-        st.info(f"🌍 **Global search includes:** {get_global_countries_display()}")
-    
-
-
+        st.info(f"🌍 **Global search includes:** {get_global_countries_display()}.")
     
     # Time filter
     time_options = get_time_filter_options()
@@ -112,17 +106,13 @@ def create_search_sidebar():
         help="Filter jobs by posting age"
     )
     
-    st.info("💡 **Date Filter Note:** This filters jobs by when they were originally posted. Jobs may have been refreshed/reposted recently but show older creation dates.")
-    
-    # Proxy settings
-    proxy_list = None  # Will be auto-configured when needed
+    st.info("💡 **Date Filter:** Filters jobs by when they were originally posted. Jobs may have been refreshed/reposted recently but show older creation dates.")
     
     # Search button
     search_clicked = st.button(
-        "🌍 Search Remote Jobs",
+        "🌍 Search Jobs",
         type="primary",
         use_container_width=True,
-        help="Begin searching for remote jobs with the selected parameters"
     )
     
     # Handle search
@@ -131,85 +121,11 @@ def create_search_sidebar():
             search_term=search_term,
             where=selected_where,
             include_remote=include_remote,
-            time_filter=time_filter,
-            proxies=proxy_list if proxy_list else None
+            time_filter=time_filter
         )
-    
-    # Search History Section
-    st.divider()
-    with st.expander(f"📊 Search History ({len(st.session_state.search_history)})", expanded=False):
-        display_search_history()
 
-def display_search_history():
-    """Display search history with download and restore functionality."""
-    if not st.session_state.search_history:
-        st.info("🔍 No search history yet. Your searches will appear here.")
-        return
-    
-    # Show recent searches (last 10)
-    recent_searches = list(reversed(st.session_state.search_history[-10:]))
-    
-    for i, history_item in enumerate(recent_searches):
-        # Create a container for each search item
-        with st.container():
-            col1, col2, col3 = st.columns([3, 1, 1])
-            
-            with col1:
-                # Display search info
-                search_date = datetime.fromisoformat(history_item['timestamp']).strftime('%b %d, %Y %H:%M')
-                st.write(f"**{history_item['display_title']}**")
-                st.caption(f"🕒 {search_date} • ⏱️ {history_item['results_summary']['search_time']:.1f}s")
-            
-            with col2:
-                # Download CSV button
-                if history_item['jobs_data']:
-                    csv_data = create_csv_download(history_item)
-                    st.download_button(
-                        label="CSV",
-                        data=csv_data,
-                        file_name=f"jobs_{history_item['id']}.csv",
-                        mime="text/csv",
-                        key=f"download_{history_item['id']}",
-                        help="Download jobs as CSV"
-                    )
-                else:
-                    st.write("No data")
-            
-            with col3:
-                # Restore search button
-                if st.button(
-                    "Restore",
-                    key=f"restore_{history_item['id']}",
-                    help="Restore search parameters",
-                    use_container_width=True,
-                    type="secondary"
-                ):
-                    restore_search_from_history(history_item)
-            
-            st.divider()
-    
-    # Clear history button
-    if len(st.session_state.search_history) > 0:
-        if st.button("🗑️ Clear History", type="secondary"):
-            st.session_state.search_history = []
-            st.rerun()
-
-def create_csv_download(history_item):
-    """Create CSV data from search history item."""
-    import io
-    import csv
-    
-    # Convert jobs data back to DataFrame
-    jobs_df = pd.DataFrame(history_item['jobs_data'])
-    
-    # Create CSV in memory
-    csv_buffer = io.StringIO()
-    jobs_df.to_csv(csv_buffer, index=False)
-    
-    return csv_buffer.getvalue()
-
-def perform_remote_job_search(search_term, where, include_remote, time_filter, proxies):
-    """Perform the remote job search with enhanced error handling."""
+def perform_remote_job_search(search_term, where, include_remote, time_filter):
+    """Perform the job search with enhanced error handling."""
     
     # Validate inputs
     if not search_term.strip():
@@ -250,7 +166,6 @@ def perform_remote_job_search(search_term, where, include_remote, time_filter, p
             where=where,
             include_remote=include_remote,
             time_filter=time_filter,
-            proxies=proxies if proxies else None,
             progress_callback=update_progress
         )
         
@@ -264,30 +179,10 @@ def perform_remote_job_search(search_term, where, include_remote, time_filter, p
                     "where": where,
                     "count": result["count"],
                     "search_time": result["search_time"],
+                    "time_filter": time_filter,
                     "metadata": result.get("metadata", {})
                 }
-                
-                # Add to search history
-                history_item = {
-                    "id": f"search_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
-                    "timestamp": datetime.now().isoformat(),
-                    "search_term": search_term,
-                    "where": where,
-                    "filters": {
-                        "include_remote": include_remote,
-                        "time_filter": time_filter
-                    },
-                    "results_summary": {
-                        "jobs_found": result["count"],
-                        "search_time": result["search_time"],
-                        "countries_searched": result.get("metadata", {}).get("countries_searched", 0),
-                        "search_type": result.get("metadata", {}).get("search_type", "unknown")
-                    },
-                    "jobs_data": result["jobs"].to_dict('records') if result["jobs"] is not None else [],
-                    "display_title": f"{search_term} {'(Remote) ' if include_remote else ''}({where}) - {result['count']} jobs"
-                }
-                st.session_state.search_history.append(history_item)
-                
+    
                 # Show balloons for successful search
                 st.balloons()
                 
@@ -314,35 +209,6 @@ def display_toast_notifications():
     """Display toast notifications below the button."""
     from utils.toast import display_toasts
     display_toasts()
-
-def restore_search_from_history(history_item):
-    """Restore search parameters from history and load the saved results."""
-    try:
-        # Restore the saved jobs data
-        if history_item['jobs_data']:
-            # Convert jobs data back to DataFrame
-            restored_jobs = pd.DataFrame(history_item['jobs_data'])
-            st.session_state.jobs_df = restored_jobs
-            
-            # Restore search metadata
-            st.session_state.search_metadata = {
-                "search_term": history_item["search_term"],
-                "where": history_item["where"],
-                "count": history_item["results_summary"]["jobs_found"],
-                "search_time": history_item["results_summary"]["search_time"],
-                "metadata": {
-                    "countries_searched": history_item["results_summary"].get("countries_searched", 0),
-                    "search_type": history_item["results_summary"].get("search_type", "unknown")
-                }
-            }
-            
-            success_toast(f"✅ Restored search: {history_item['display_title']}")
-            st.rerun()
-        else:
-            warning_toast("No job data available for this search")
-            
-    except Exception as e:
-        error_toast(f"Failed to restore search: {str(e)}")
 
 def apply_display_formatting(jobs_df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -385,14 +251,14 @@ def apply_display_formatting(jobs_df: pd.DataFrame) -> pd.DataFrame:
         formatted_df['job_type'] = formatted_df['job_type'].fillna('none').astype(str).str.lower()
         formatted_df['job_type'] = formatted_df['job_type'].map(job_type_mapping).fillna('Not specified')
     
-    # Format posted dates to "Aug 23, 2025 16:47" format
+    # Format posted dates to "Aug 23, 2025" format
     if 'date_posted' in formatted_df.columns:
         formatted_df['date_posted_formatted'] = formatted_df['date_posted'].apply(format_posted_date_enhanced)
     elif 'date_posted_formatted' in formatted_df.columns:
         # Re-format existing formatted dates
         formatted_df['date_posted_formatted'] = formatted_df['date_posted_formatted'].apply(format_posted_date_enhanced)
     
-    # Apply default sorting: Salary (DESC) then Job Title (ASC)
+    # Apply default sorting: Salary (DESC) then Date Posted (DESC)
     try:
         # Prepare salary sorting column
         if 'salary_formatted' in formatted_df.columns:
@@ -400,13 +266,15 @@ def apply_display_formatting(jobs_df: pd.DataFrame) -> pd.DataFrame:
         else:
             formatted_df['_salary_sort_key'] = 0
         
-        # Simple sorting: Salary DESC, then Job Title ASC
-        sort_columns = ['_salary_sort_key']
-        sort_ascending = [False]  # Salary descending (highest first)
+        # Prepare date sorting column
+        if 'date_posted' in formatted_df.columns:
+            formatted_df['_date_sort_key'] = pd.to_datetime(formatted_df['date_posted'], errors='coerce')
+        else:
+            formatted_df['_date_sort_key'] = pd.Timestamp.min
         
-        if 'title' in formatted_df.columns:
-            sort_columns.append('title')
-            sort_ascending.append(True)  # Job title ascending (A-Z)
+        # Sorting: Salary DESC, then Date Posted DESC
+        sort_columns = ['_salary_sort_key', '_date_sort_key']
+        sort_ascending = [False, False]  # Both descending (highest salary first, newest date first)
         
         formatted_df = formatted_df.sort_values(
             sort_columns, 
@@ -414,18 +282,15 @@ def apply_display_formatting(jobs_df: pd.DataFrame) -> pd.DataFrame:
             na_position='last'
         )
         
-        # Remove temporary sorting column
-        formatted_df = formatted_df.drop(columns=['_salary_sort_key'], errors='ignore')
+        # Remove temporary sorting columns
+        formatted_df = formatted_df.drop(columns=['_salary_sort_key', '_date_sort_key'], errors='ignore')
         
     except Exception as e:
-        # Fallback to job title sorting if there are issues
-        if 'title' in formatted_df.columns:
-            formatted_df = formatted_df.sort_values('title', ascending=True, na_position='last')
+        # Fallback to date posted sorting if there are issues
+        if 'date_posted' in formatted_df.columns:
+            formatted_df = formatted_df.sort_values('date_posted', ascending=False, na_position='last')
     
     return formatted_df
-
-
-
 
 def _extract_salary_for_sorting(salary_str):
     """
@@ -473,8 +338,6 @@ def _extract_salary_for_sorting(salary_str):
     
     return 0
 
-
-
 def apply_interactive_filters(jobs_df: pd.DataFrame) -> pd.DataFrame:
     """
     Apply interactive post-processing filters above the results table.
@@ -507,18 +370,18 @@ def apply_interactive_filters(jobs_df: pd.DataFrame) -> pd.DataFrame:
     with filter_col1:
         # Job Title Filter
         job_title_filter = st.text_input(
-            "🔍 Job Title",
+            "🔍 Position Title",
             value="",
             key="job_title_filter",
             help="Filter jobs by title keywords (case-insensitive)"
         )
-        
+
         if job_title_filter.strip():
             title_keywords = [k.strip().lower() for k in job_title_filter.split() if k.strip()]
             for keyword in title_keywords:
                 title_mask = filtered_df['title'].fillna('').str.lower().str.contains(keyword, na=False)
                 filtered_df = filtered_df[title_mask]
-    
+
     with filter_col2:
         # Exclude Keywords Filter
         exclude_keywords = st.text_input(
@@ -535,8 +398,7 @@ def apply_interactive_filters(jobs_df: pd.DataFrame) -> pd.DataFrame:
                 title_mask = ~filtered_df['title'].fillna('').str.lower().str.contains(keyword, na=False)
                 desc_mask = ~filtered_df.get('description', pd.Series([''] * len(filtered_df))).fillna('').str.lower().str.contains(keyword, na=False)
                 filtered_df = filtered_df[title_mask & desc_mask]
-    
-    
+
     with filter_col3:
         # Salary Range Filter
         salary_range_options = ['Any', '$0-50k', '$50k-100k', '$100k-150k', '$150k+']
@@ -587,15 +449,7 @@ def apply_interactive_filters(jobs_df: pd.DataFrame) -> pd.DataFrame:
         if selected_job_types and 'job_type' in filtered_df.columns:
             filtered_df = filtered_df[filtered_df['job_type'].isin(selected_job_types)]
     
-
-    # Show filter summary
-    if len(filtered_df) != len(jobs_df):
-        st.info(f"🎯 Filters applied: {len(jobs_df) - len(filtered_df)} jobs filtered out")
-    
-    st.markdown("---")  # Separator line
-    
     return filtered_df
-
 
 def display_search_results():
     """Display the search results with enhanced formatting and interactive filters."""
@@ -605,49 +459,54 @@ def display_search_results():
         st.info("No jobs to display.")
         return
     
-    # Results header
-    st.header(f"📋 Search Results ({len(jobs_df)} jobs)")
-    
-    # Search Statistics (moved from search function)
+    # Search Statistics and Parameters
     if st.session_state.search_metadata:
         metadata = st.session_state.search_metadata
         search_meta = metadata.get("metadata", {})
         
-        if metadata["where"] == "Global":
-            col1, col2, col3, col4 = st.columns(4)
-            with col1:
-                st.metric("Remote Jobs Found", metadata["count"])
-            with col2:
-                st.metric("Search Time", f"{metadata['search_time']:.1f}s")
-            with col3:
-                countries_searched = search_meta.get("countries_searched", 0)
-                st.metric("Countries Searched", countries_searched)
-            with col4:
-                st.metric("Search Type", "Global")
-        else:
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                st.metric("Remote Jobs Found", metadata["count"])
-            with col2:
-                st.metric("Search Time", f"{metadata['search_time']:.1f}s")
-            with col3:
-                st.metric("Country", metadata["where"])
-        
-        st.divider()  # Visual separator
+        st.divider()
     
     # Apply formatting and sorting improvements first
     formatted_jobs_df = apply_display_formatting(jobs_df)
     
-    # Post-processing filters (interactive - don't require re-scraping)
-    filtered_jobs_df = apply_interactive_filters(formatted_jobs_df)
+    # Results table header - always show job count
+    st.subheader(f"🎯 Search Results ({len(jobs_df)} jobs)")
     
-    # Update header with filtered count if different
-    if len(filtered_jobs_df) != len(jobs_df):
-        st.subheader(f"🎯 Showing {len(filtered_jobs_df)} of {len(jobs_df)} jobs (filtered)")
+    # Display search parameters below the subheader
+    if st.session_state.search_metadata:
+        metadata = st.session_state.search_metadata
+        search_meta = metadata.get("metadata", {})
+        
+        # Create columns for better layout
+        col1, col2, col3, col4 = st.columns(4)
+        
+        # Search term
+        with col1:
+            st.markdown("##### Search Query")
+            st.success(f"**{metadata['search_term']}**")
+        
+        # Location/Countries
+        with col2:
+            st.markdown("##### Location")
+            if metadata["where"] == "Global":
+                countries_searched = search_meta.get("countries_searched", 0)
+                st.success(f"**Global ({countries_searched} countries)**")
+            else:
+                st.success(f"**{metadata['where']}**")
+        
+        # Job posting age
+        with col3:
+            st.markdown("##### Job Posting Age")
+            st.success(f"**{metadata['time_filter']}**")
+        
+        # Search time
+        with col4:
+            st.markdown("##### Search Time")
+            st.success(f"**{metadata['search_time']:.1f}s**")
     
-    
-    # Results table
-    st.subheader("🎯 Job Listings")
+    # Post-processing filters
+    with st.expander("🎛️ Filter Results", expanded=True):
+        filtered_jobs_df = apply_interactive_filters(formatted_jobs_df)
     
     # Define display columns (added job_type after title)
     display_columns = [
@@ -660,6 +519,10 @@ def display_search_results():
         if col not in filtered_jobs_df.columns:
             filtered_jobs_df[col] = "N/A"
     
+    # Show filter summary
+    if len(filtered_jobs_df) != len(jobs_df):
+        st.info(f"🎯 Filters applied: {len(filtered_jobs_df)} of {len(jobs_df)} jobs are visible")
+
     # Display table
     st.dataframe(
         filtered_jobs_df[display_columns],
@@ -774,7 +637,6 @@ def show_welcome_message():
         - Time filters are based on original post date (not refresh/update date)
         - Job type filtering is done via post-processing for better accuracy
         """)
-
 
 def filter_by_salary_range(jobs_df: pd.DataFrame, salary_range: str) -> pd.DataFrame:
     """
