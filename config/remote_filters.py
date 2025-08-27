@@ -27,12 +27,12 @@ JOB_TYPES: Dict[str, Tuple[str, str]] = {
 # Global search countries (in priority order) - format: (country_name, country_code)
 GLOBAL_COUNTRIES: List[Tuple[str, str]] = [
     ("United States", "usa"),
-    ("Canada", "canada"), 
+    ("Canada", "canada"),
+    ("Mexico", "mexico"),
     ("Brazil", "brazil"),
-    ("Germany", "germany"),
-    ("Netherlands", "netherlands"),
     ("United Kingdom", "uk"),
-    ("Australia", "australia"),
+    ("Portugal", "portugal"),
+    ("Spain", "spain"),
 ]
 
 # Remote search keywords to enhance search terms
@@ -81,13 +81,14 @@ def enhance_search_term_with_remote_keywords(search_term: str) -> str:
     
     # Don't add keywords if already present
     search_lower = search_term.lower()
-    has_remote_keyword = any(keyword in search_lower for keyword in ["remote", "wfh", "work from home"])
+    has_remote_keyword = any(keyword.lower() in search_lower for keyword in REMOTE_KEYWORDS)
     
     if has_remote_keyword:
         return search_term
     
-    # Add remote keywords to enhance results
-    enhanced_term = f"{search_term} (remote OR \"work from home\" OR WFH)"
+    # Create OR condition with all remote keywords
+    remote_conditions = " OR ".join([f'"{keyword}"' if " " in keyword else keyword for keyword in REMOTE_KEYWORDS])
+    enhanced_term = f"{search_term} ({remote_conditions})"
     return enhanced_term
 
 def get_country_flag_and_name(country_code: str) -> Tuple[str, str]:
