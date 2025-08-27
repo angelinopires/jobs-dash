@@ -33,7 +33,6 @@ class SearchTask:
     search_term: str
     include_remote: bool
     time_filter: Optional[str] = None
-    proxies: Optional[Dict] = None
     task_id: Optional[str] = None
 
 
@@ -90,7 +89,6 @@ class ThreadingManager:
         search_term: str,
         include_remote: bool = True,
         time_filter: Optional[str] = None,
-        proxies: Optional[Dict] = None,
         progress_callback: Optional[Callable] = None
     ) -> Dict[str, Any]:
         """
@@ -102,7 +100,6 @@ class ThreadingManager:
             search_term: Job search term
             include_remote: Whether to include remote jobs
             time_filter: Time filter for job postings
-            proxies: Proxy configuration
             progress_callback: Callback for progress updates
             
         Returns:
@@ -127,7 +124,6 @@ class ThreadingManager:
                 search_term=search_term,
                 include_remote=include_remote,
                 time_filter=time_filter,
-                proxies=proxies,
                 task_id=f"task_{i}"
             )
             for i, country in enumerate(countries)
@@ -266,7 +262,6 @@ class ThreadingManager:
                     where=task.country,
                     include_remote=task.include_remote,
                     time_filter=task.time_filter,
-                    proxies=task.proxies
                 )
             except TypeError:
                 # Fallback to positional arguments for BaseScraper methods
@@ -276,7 +271,6 @@ class ThreadingManager:
                     task.country,      # country (positional)
                     task.include_remote,  # include_remote (positional)
                     time_filter=task.time_filter,  # **kwargs
-                    proxies=task.proxies  # **kwargs
                 )
             
             search_time = time.time() - start_time

@@ -233,7 +233,6 @@ class BaseScraper(ABC):
         
         # Extract additional parameters for threading
         time_filter = kwargs.get('time_filter')
-        proxies = kwargs.get('proxies')
         
         # Use threading manager for parallel processing
         result = self.threading_manager.search_countries_parallel(
@@ -242,7 +241,6 @@ class BaseScraper(ABC):
             search_term=search_term,
             include_remote=include_remote,
             time_filter=time_filter,
-            proxies=proxies,
             progress_callback=progress_callback
         )
         

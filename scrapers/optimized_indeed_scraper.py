@@ -115,10 +115,6 @@ class OptimizedIndeedScraper(BaseScraper):
             if hours_old is not None:
                 search_params["hours_old"] = hours_old
         
-        # Add proxies if provided (future feature)
-        if optimized_filters.get('proxies'):
-            search_params["proxies"] = optimized_filters['proxies']
-        
         return search_params
     
     def _call_scraping_api(self, search_params: Dict[str, Any]) -> pd.DataFrame:
