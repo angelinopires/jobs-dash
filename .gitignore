@@ -30,11 +30,14 @@ venv.bak/
 
 # IDE
 .cursor/
-.vscode/
 .idea/
 *.swp
 *.swo
 *~
+
+# VS Code - user-specific settings only
+.vscode/settings.json  # User-specific overrides
+.vscode/launch.json    # Debug configurations with local paths
 
 # OS
 .DS_Store
