@@ -44,5 +44,5 @@ repos:
         entry: python tests/run_tests.py
         language: system
         pass_filenames: false
-        files: ^(tests/|.*\.py)$
+        files: .*
         stages: [pre-push]

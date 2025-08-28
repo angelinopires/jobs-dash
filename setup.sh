@@ -52,4 +52,3 @@ echo ""
 echo "🎯 To deactivate the virtual environment:"
 echo "   deactivate"
 echo ""
-

@@ -128,3 +128,5 @@ This project is open source and available under the [MIT License](LICENSE).
 **Happy job hunting! 🎯**
 
 *Built with ❤️ and Python*
+# Test comment for pre-push hook
+# Second test for pre-push hook
