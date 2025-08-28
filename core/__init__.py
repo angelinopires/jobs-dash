@@ -9,16 +9,10 @@ This package provides:
 - ThreadingManager: Parallel processing for global searches (Phase 2)
 """
 
+from .base_optimizer import BaseOptimizer
 from .base_scraper import BaseScraper
 from .cache_manager import CacheManager
 from .performance_monitor import PerformanceMonitor
-from .base_optimizer import BaseOptimizer
 from .threading_manager import ThreadingManager
 
-__all__ = [
-    'BaseScraper',
-    'CacheManager', 
-    'PerformanceMonitor',
-    'BaseOptimizer',
-    'ThreadingManager'
-]
+__all__ = ["BaseScraper", "CacheManager", "PerformanceMonitor", "BaseOptimizer", "ThreadingManager"]

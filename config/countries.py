@@ -3,7 +3,7 @@ Country configuration for JobSpy scrapers.
 Based on the official JobSpy repository: https://github.com/speedyapply/JobSpy
 """
 
-from typing import Dict, Tuple, List
+from typing import Dict, List, Tuple
 
 # Country mapping: (display_name, indeed_country_name, glassdoor_support)
 # JobSpy expects lowercase country names, not country codes
@@ -29,7 +29,6 @@ COUNTRIES: Dict[str, Tuple[str, str, bool]] = {
     "United Kingdom": ("United Kingdom", "uk", True),
     "United States": ("United States", "usa", True),
     "Vietnam": ("Vietnam", "vietnam", True),
-    
     # Indeed only
     "Argentina": ("Argentina", "argentina", False),
     "Austria": ("Austria", "austria", False),
@@ -75,11 +74,13 @@ COUNTRIES: Dict[str, Tuple[str, str, bool]] = {
     "Venezuela": ("Venezuela", "venezuela", False),
 }
 
+
 def get_country_options() -> List[str]:
     """Get list of country display names for dropdown."""
     # Put "Global" first, then sorted countries
     countries = ["Global"] + sorted(COUNTRIES.keys())
     return countries
+
 
 def get_indeed_country_name(country_name: str) -> str:
     """Get Indeed country name from display name."""
@@ -87,11 +88,13 @@ def get_indeed_country_name(country_name: str) -> str:
         return COUNTRIES[country_name][1]
     return "usa"  # Default to usa
 
+
 def has_glassdoor_support(country_name: str) -> bool:
     """Check if country supports Glassdoor scraping."""
     if country_name in COUNTRIES:
         return COUNTRIES[country_name][2]
     return False
+
 
 def get_country_info(country_name: str) -> Tuple[str, str, bool]:
     """Get full country information."""
@@ -99,9 +102,11 @@ def get_country_info(country_name: str) -> Tuple[str, str, bool]:
         return COUNTRIES[country_name]
     return ("United States", "US", False)
 
+
 def get_glassdoor_countries() -> List[str]:
     """Get list of countries that support Glassdoor."""
     return [name for name, (_, _, glassdoor) in COUNTRIES.items() if glassdoor]
+
 
 def get_indeed_only_countries() -> List[str]:
     """Get list of countries that only support Indeed."""

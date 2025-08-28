@@ -9,7 +9,7 @@ from typing import Dict, List, Tuple
 CURRENCIES: Dict[str, Tuple[str, str]] = {
     "Any": ("Any Currency", "ANY"),
     "USD": ("US Dollar", "USD"),
-    "EUR": ("Euro", "EUR"), 
+    "EUR": ("Euro", "EUR"),
     "GBP": ("British Pound", "GBP"),
     "CAD": ("Canadian Dollar", "CAD"),
     "AUD": ("Australian Dollar", "AUD"),
@@ -36,18 +36,13 @@ GLOBAL_COUNTRIES: List[Tuple[str, str]] = [
 ]
 
 # Remote search keywords to enhance search terms
-REMOTE_KEYWORDS: List[str] = [
-    "remote",
-    "work from home", 
-    "WFH",
-    "distributed",
-    "telecommute",
-    "home office"
-]
+REMOTE_KEYWORDS: List[str] = ["remote", "work from home", "WFH", "distributed", "telecommute", "home office"]
+
 
 def get_currency_options() -> List[str]:
     """Get list of currency display names for dropdown."""
     return list(CURRENCIES.keys())
+
 
 def get_currency_code(currency_name: str) -> str:
     """Get currency code from display name."""
@@ -55,9 +50,11 @@ def get_currency_code(currency_name: str) -> str:
         return CURRENCIES[currency_name][1]
     return "ANY"
 
+
 def get_job_type_options() -> List[str]:
-    """Get list of job type display names for dropdown.""" 
+    """Get list of job type display names for dropdown."""
     return list(JOB_TYPES.keys())
+
 
 def get_job_type_code(job_type_name: str) -> str:
     """Get job type code from display name."""
@@ -65,31 +62,35 @@ def get_job_type_code(job_type_name: str) -> str:
         return JOB_TYPES[job_type_name][1]
     return "ANY"
 
+
 def get_global_countries() -> List[Tuple[str, str]]:
     """Get list of global countries for remote job search."""
     return GLOBAL_COUNTRIES.copy()
+
 
 def get_global_countries_display() -> str:
     """Get formatted string of global countries for display."""
     countries = [name for name, _ in GLOBAL_COUNTRIES]
     return ", ".join(countries)
 
+
 def enhance_search_term_with_remote_keywords(search_term: str) -> str:
     """Enhance search term with remote keywords for better remote job results."""
     if not search_term.strip():
         return search_term
-    
+
     # Don't add keywords if already present
     search_lower = search_term.lower()
     has_remote_keyword = any(keyword.lower() in search_lower for keyword in REMOTE_KEYWORDS)
-    
+
     if has_remote_keyword:
         return search_term
-    
+
     # Create OR condition with all remote keywords
     remote_conditions = " OR ".join([f'"{keyword}"' if " " in keyword else keyword for keyword in REMOTE_KEYWORDS])
     enhanced_term = f"{search_term} ({remote_conditions})"
     return enhanced_term
+
 
 def get_country_flag_and_name(country_code: str) -> Tuple[str, str]:
     """Get country name from country code."""
