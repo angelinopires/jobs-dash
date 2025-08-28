@@ -28,6 +28,12 @@
         "--max-line-length=120",
         "--extend-ignore=E203,W503"
     ],
+    "python.linting.mypyEnabled": true,
+    "python.linting.mypyArgs": [
+        "--ignore-missing-imports",
+        "--follow-imports=silent",
+        "--show-column-numbers"
+    ],
 
     // Testing
     "python.testing.pytestEnabled": true,
@@ -41,5 +47,18 @@
             "source.organizeImports": "explicit",
             "source.fixAll": "explicit"
         },
+        "editor.formatOnType": false,
+        "editor.formatOnPaste": true,
+        "editor.detectIndentation": false,
+        "editor.insertSpaces": true,
+        "editor.tabSize": 4,
     },
+
+    // Additional Python-specific settings
+    "python.formatting.blackArgs": ["--line-length", "120", "--fast"],
+    "python.sortImports.args": ["--profile=black", "--line-length=120"],
+
+    // Disable conflicting formatters
+    "python.formatting.autopep8Enabled": false,
+    "python.formatting.yapfEnabled": false,
 }

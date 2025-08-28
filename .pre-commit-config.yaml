@@ -36,6 +36,17 @@ repos:
       - id: flake8
         args: [--max-line-length=120, --extend-ignore=E203]
 
+  # mypy - Static type checker
+  - repo: local
+    hooks:
+      - id: mypy
+        name: mypy
+        entry: python -m mypy
+        language: system
+        files: \.py$
+        require_serial: true
+        pass_filenames: false
+
   # Run unit tests
   - repo: local
     hooks:
