@@ -1,21 +1,45 @@
 {
+    // Python Environment
     "python.defaultInterpreterPath": "./venv/bin/python",
     "python.terminal.activateEnvironment": true,
+
+    // Black Formatter Configuration
     "python.formatting.provider": "black",
     "python.formatting.blackArgs": ["--line-length", "120"],
+    "python.formatting.blackPath": "./venv/bin/black",
+
+    // isort Configuration
+    "isort.args": [
+        "--profile=black",
+        "--line-length=120",
+        "--multi-line=3",
+        "--trailing-comma",
+        "--use-parentheses",
+        "--ensure-newline-before-comments"
+    ],
+    "isort.path": ["./venv/bin/isort"],
+    "isort.check": true,
+    "isort.importStrategy": "fromEnvironment",
+
+    // Linting
     "python.linting.enabled": true,
     "python.linting.flake8Enabled": true,
     "python.linting.flake8Args": [
         "--max-line-length=120",
         "--extend-ignore=E203,W503"
     ],
+
+    // Testing
     "python.testing.pytestEnabled": true,
+
+    // OVERRIDE global settings for Python files
     "[python]": {
         "editor.defaultFormatter": "ms-python.black-formatter",
         "editor.formatOnSave": true,
+        "editor.formatOnSaveMode": "file",
         "editor.codeActionsOnSave": {
-            "source.organizeImports": "explicit"
-        }
+            "source.organizeImports": "explicit",
+            "source.fixAll": "explicit"
+        },
     },
-    "isort.args": "--profile black --line-length 120"
 }

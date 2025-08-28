@@ -1,25 +1,26 @@
 # Python
 __pycache__/
-*.py[cod]
-*$py.class
-*.so
+.eggs/
+.installed.cfg
+.mypy_cache/
 .Python
+*.egg
+*.egg-info/
+*.py[cod]
+*.so
+*$py.class
 build/
 develop-eggs/
 dist/
 downloads/
 eggs/
-.eggs/
 lib/
 lib64/
+MANIFEST
 parts/
 sdist/
 var/
 wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
 
 # Virtual environments
 venv/

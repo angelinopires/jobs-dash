@@ -1,11 +1,11 @@
 # 🤖 Live Job Search Agent
 
-A powerful, real-time job scraping dashboard built with **Streamlit** and **jobspy**. This application allows users to search for job positions across multiple job boards simultaneously, with an intuitive web interface and interactive results display.
+A powerful, real-time job scraping dashboard built with **Streamlit** and **jobspy**. This application allows users to search for job positions across multiple job boards simultaneously (coming soon), with an intuitive web interface and interactive results display.
 
 ## 🛠️ Technology Stack
 
 ### **Frontend & Framework**
-- **Streamlit**: Web application framework (like React but for Python)
+- **Streamlit**: Web application framework
 - **Pandas**: Data manipulation and analysis
 - **HTML/Markdown**: Rich text rendering
 
@@ -14,24 +14,9 @@ A powerful, real-time job scraping dashboard built with **Streamlit** and **jobs
 - **Python 3.8+**: Core programming language
 - **Session State**: Persistent data management
 
-## 📦 Installation
+## 🚀 Quick Start
 
-### **Prerequisites**
-- Python 3.8 or higher
-- pip (Python package manager)
-
-### **🚀 Quick Setup (Recommended)**
-
-**Option 1: Automated Setup**
-```bash
-git clone <repository-url>
-cd jobs-dashboard
-./setup.sh
-source venv/bin/activate
-streamlit run dashboard.py
-```
-
-**Option 2: Manual Setup**
+### **Basic Setup**
 ```bash
 git clone <repository-url>
 cd jobs-dashboard
@@ -41,45 +26,24 @@ pip install -r requirements.txt
 streamlit run dashboard.py
 ```
 
-### **🎯 Virtual Environment Best Practices**
-
-**Why Virtual Environments?**
-- **Isolation**: Each project has its own dependencies
-- **Version Control**: Avoid conflicts between different projects
-- **Clean Environment**: No system-wide package pollution
-- **Reproducibility**: Same environment across different machines
-
-**Essential Commands:**
+### **Development Setup** (with code quality tools)
 ```bash
-# Activate environment
-source venv/bin/activate
-
-# Deactivate environment
-deactivate
-
-# Check active environment
-which python  # Should show venv/bin/python
-
-# Update dependencies
-pip install --upgrade -r requirements.txt
+pip install -e .[dev]     # Install Black, flake8, isort, mypy
 ```
 
-### **Access the Dashboard**
-- Open your browser to `http://localhost:8501`
-- The dashboard will load automatically
+## 🎯 Usage
+
+1. **Start the dashboard:**
+   ```bash
+   streamlit run dashboard.py
+   ```
+
+2. **Open your browser** to `http://localhost:8501`
 
 ## 🧪 Testing
 
-### **Unit Tests**
-The project includes a comprehensive test suite covering the scraper architecture and core functionality.
-
 ```bash
-# Run all tests
-python3 tests/run_tests.py
-
-# Run specific test module
-python3 -m unittest tests.test_base_scraper -v
-python3 -m unittest tests.test_indeed_scraper -v
+python tests/run_tests.py
 ```
 
 ## 🔧 Customization
@@ -154,15 +118,10 @@ python3 -m unittest tests.test_indeed_scraper -v
 4. Test thoroughly
 5. Submit a pull request
 
+
 ## 📝 License
 
 This project is open source and available under the [MIT License](LICENSE).
-
-## 🙏 Acknowledgments
-
-- **jobspy** library for multi-site scraping capabilities
-- **Streamlit** team for the amazing web framework
-- **Pandas** community for data manipulation tools
 
 ---
 

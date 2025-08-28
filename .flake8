@@ -11,4 +11,3 @@ exclude =
     *.egg-info,
     .tox,
     .mypy_cache
-
