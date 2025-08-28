@@ -19,7 +19,7 @@ from config.countries import (
 class TestCountries(unittest.TestCase):
     """Test cases for country configuration functions."""
 
-    def setUp(self):
+    def setUp(self) -> None:
         """Set up test fixtures."""
         # Sample country data for testing
         self.sample_countries = {
@@ -30,7 +30,7 @@ class TestCountries(unittest.TestCase):
             "France": ("France", "france", True),
         }
 
-    def test_countries_constant_structure(self):
+    def test_countries_constant_structure(self) -> None:
         """Test that COUNTRIES constant has expected structure."""
         # Should be a dictionary
         self.assertIsInstance(COUNTRIES, dict)
@@ -60,7 +60,7 @@ class TestCountries(unittest.TestCase):
             # Glassdoor support should be boolean
             self.assertIsInstance(glassdoor_support, bool)
 
-    def test_get_country_options(self):
+    def test_get_country_options(self) -> None:
         """Test getting list of country options."""
         options = get_country_options()
 
@@ -81,7 +81,7 @@ class TestCountries(unittest.TestCase):
         sorted_countries = sorted(COUNTRIES.keys())
         self.assertEqual(options[1:], sorted_countries)
 
-    def test_get_indeed_country_name_valid_countries(self):
+    def test_get_indeed_country_name_valid_countries(self) -> None:
         """Test getting Indeed country names for valid countries."""
         test_cases = [
             ("United States", "usa"),
@@ -98,7 +98,7 @@ class TestCountries(unittest.TestCase):
                 result = get_indeed_country_name(display_name)
                 self.assertEqual(result, expected_indeed_name)
 
-    def test_get_indeed_country_name_invalid_countries(self):
+    def test_get_indeed_country_name_invalid_countries(self) -> None:
         """Test getting Indeed country names for invalid countries."""
         invalid_countries = [
             "Invalid Country",
@@ -110,11 +110,11 @@ class TestCountries(unittest.TestCase):
 
         for invalid_country in invalid_countries:
             with self.subTest(country=invalid_country):
-                result = get_indeed_country_name(invalid_country)
+                result = get_indeed_country_name(str(invalid_country))
                 # Should default to "usa"
                 self.assertEqual(result, "usa")
 
-    def test_get_indeed_country_name_edge_cases(self):
+    def test_get_indeed_country_name_edge_cases(self) -> None:
         """Test edge cases for get_indeed_country_name."""
         # Test with case sensitivity
         result = get_indeed_country_name("united states")
@@ -128,7 +128,7 @@ class TestCountries(unittest.TestCase):
         result = get_indeed_country_name("123")
         self.assertEqual(result, "usa")
 
-    def test_has_glassdoor_support_valid_countries(self):
+    def test_has_glassdoor_support_valid_countries(self) -> None:
         """Test checking Glassdoor support for valid countries."""
         # Test countries with Glassdoor support
         glassdoor_supported = [
@@ -159,7 +159,7 @@ class TestCountries(unittest.TestCase):
                 result = has_glassdoor_support(country_name)
                 self.assertFalse(result)
 
-    def test_has_glassdoor_support_invalid_countries(self):
+    def test_has_glassdoor_support_invalid_countries(self) -> None:
         """Test checking Glassdoor support for invalid countries."""
         invalid_countries = [
             "Invalid Country",
@@ -171,11 +171,11 @@ class TestCountries(unittest.TestCase):
 
         for invalid_country in invalid_countries:
             with self.subTest(country=invalid_country):
-                result = has_glassdoor_support(invalid_country)
+                result = has_glassdoor_support(str(invalid_country))
                 # Should default to False
                 self.assertFalse(result)
 
-    def test_get_country_info_valid_countries(self):
+    def test_get_country_info_valid_countries(self) -> None:
         """Test getting full country information for valid countries."""
         test_cases = [
             ("United States", ("United States", "usa", True)),
@@ -199,7 +199,7 @@ class TestCountries(unittest.TestCase):
                 self.assertIsInstance(indeed, str)
                 self.assertIsInstance(glassdoor, bool)
 
-    def test_get_country_info_invalid_countries(self):
+    def test_get_country_info_invalid_countries(self) -> None:
         """Test getting country information for invalid countries."""
         invalid_countries = [
             "Invalid Country",
@@ -211,11 +211,11 @@ class TestCountries(unittest.TestCase):
 
         for invalid_country in invalid_countries:
             with self.subTest(country=invalid_country):
-                result = get_country_info(invalid_country)
+                result = get_country_info(str(invalid_country))
                 # Should default to ("United States", "US", False)
                 self.assertEqual(result, ("United States", "US", False))
 
-    def test_country_data_consistency(self):
+    def test_country_data_consistency(self) -> None:
         """Test consistency between country data functions."""
         # Test that all functions work together consistently
         for country_name in COUNTRIES.keys():
@@ -231,7 +231,7 @@ class TestCountries(unittest.TestCase):
                 # Should be in country options
                 self.assertIn(country_name, get_country_options())
 
-    def test_country_data_quality(self):
+    def test_country_data_quality(self) -> None:
         """Test quality of country data."""
         for country_name, country_data in COUNTRIES.items():
             with self.subTest(country=country_name):
@@ -249,7 +249,7 @@ class TestCountries(unittest.TestCase):
                 # Indeed name should not contain special characters
                 self.assertTrue(indeed.replace(" ", "").isalpha() or indeed.replace(" ", "").isalnum())
 
-    def test_glassdoor_support_distribution(self):
+    def test_glassdoor_support_distribution(self) -> None:
         """Test distribution of Glassdoor support across countries."""
         total_countries = len(COUNTRIES)
         glassdoor_supported = sum(1 for _, _, glassdoor in COUNTRIES.values() if glassdoor)

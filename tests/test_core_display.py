@@ -22,7 +22,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 class TestCoreDisplay(unittest.TestCase):
     """Core display and formatting functionality tests."""
 
-    def setUp(self):
+    def setUp(self) -> None:
         """Set up test fixtures."""
         self.sample_jobs_df = pd.DataFrame(
             {
@@ -36,7 +36,7 @@ class TestCoreDisplay(unittest.TestCase):
             }
         )
 
-    def test_display_formatting_core_functionality(self):
+    def test_display_formatting_core_functionality(self) -> None:
         """Test core display formatting works."""
         result = apply_display_formatting(self.sample_jobs_df)
 
@@ -44,7 +44,7 @@ class TestCoreDisplay(unittest.TestCase):
         self.assertEqual(len(result), 2)
         self.assertIn("job_type", result.columns)
 
-    def test_job_type_formatting(self):
+    def test_job_type_formatting(self) -> None:
         """Test job type formatting from raw to display values."""
         result = apply_display_formatting(self.sample_jobs_df)
 
@@ -53,7 +53,7 @@ class TestCoreDisplay(unittest.TestCase):
         self.assertIn("Full-time", job_types)
         self.assertIn("Contract", job_types)
 
-    def test_date_formatting(self):
+    def test_date_formatting(self) -> None:
         """Test date formatting from ISO to readable format."""
         result = apply_display_formatting(self.sample_jobs_df)
 
@@ -64,7 +64,7 @@ class TestCoreDisplay(unittest.TestCase):
         for date in formatted_dates:
             self.assertIn("2024", date)
 
-    def test_salary_sorting_extraction(self):
+    def test_salary_sorting_extraction(self) -> None:
         """Test salary extraction for sorting purposes."""
         test_cases = [
             ("$80,000 - $120,000", 120000),
@@ -82,7 +82,7 @@ class TestCoreDisplay(unittest.TestCase):
 class TestDataCleaning(unittest.TestCase):
     """Test data cleaning and NaN prevention."""
 
-    def test_clean_display_value_with_nan_values(self):
+    def test_clean_display_value_with_nan_values(self) -> None:
         """Test cleaning of various NaN/invalid values."""
         invalid_values = [None, np.nan, pd.NA, "nan", "None", "", "   "]
 
@@ -91,7 +91,7 @@ class TestDataCleaning(unittest.TestCase):
                 result = clean_display_value(invalid_value)
                 self.assertEqual(result, "Not available")
 
-    def test_clean_display_value_preserves_valid_data(self):
+    def test_clean_display_value_preserves_valid_data(self) -> None:
         """Test that valid data is preserved."""
         valid_values = ["Software Engineer", "Google Inc.", "$100,000"]
 
@@ -100,7 +100,7 @@ class TestDataCleaning(unittest.TestCase):
                 result = clean_display_value(valid_value)
                 self.assertEqual(result, valid_value)
 
-    def test_company_info_formatting(self):
+    def test_company_info_formatting(self) -> None:
         """Test company info formatting with mixed valid/invalid data."""
         test_cases = [
             ("Industry: Technology | Size: 100-500", "Industry: Technology | Size: 100-500"),
@@ -113,20 +113,20 @@ class TestDataCleaning(unittest.TestCase):
                 result = clean_company_info(input_str)
                 self.assertEqual(result, expected)
 
-    def test_date_formatting_edge_cases(self):
+    def test_date_formatting_edge_cases(self) -> None:
         """Test date formatting with edge cases."""
         test_cases = [("2024-01-15", "Jan 15, 2024"), ("N/A", "N/A"), (None, "N/A"), ("invalid-date", "invalid-date")]
 
         for input_date, expected in test_cases:
             with self.subTest(date=input_date):
-                result = format_posted_date_enhanced(input_date)
+                result = format_posted_date_enhanced(str(input_date) if input_date is not None else "")
                 self.assertEqual(result, expected)
 
 
 class TestSalaryFiltering(unittest.TestCase):
     """Test salary-based filtering functionality."""
 
-    def setUp(self):
+    def setUp(self) -> None:
         """Set up test data with various salary formats."""
         self.jobs_with_salaries = pd.DataFrame(
             {
@@ -140,7 +140,7 @@ class TestSalaryFiltering(unittest.TestCase):
             }
         )
 
-    def test_salary_range_filtering(self):
+    def test_salary_range_filtering(self) -> None:
         """Test filtering by salary ranges."""
         # Test 50k-100k range (should include first and third jobs)
         result_50_100k = filter_by_salary_range(self.jobs_with_salaries, "$50k-100k")

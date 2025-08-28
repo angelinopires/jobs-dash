@@ -19,7 +19,7 @@ from utils.time_filters import (
 class TestTimeFilters(unittest.TestCase):
     """Test cases for time filter utility functions."""
 
-    def setUp(self):
+    def setUp(self) -> None:
         """Set up test fixtures."""
         # Expected time filter mappings
         self.expected_filters = {
@@ -29,7 +29,7 @@ class TestTimeFilters(unittest.TestCase):
             "Past Month": 720,  # 30 days (24 * 30)
         }
 
-    def test_time_filters_constant_structure(self):
+    def test_time_filters_constant_structure(self) -> None:
         """Test that TIME_FILTERS constant has expected structure."""
         # Should be a dictionary
         self.assertIsInstance(TIME_FILTERS, dict)
@@ -43,7 +43,7 @@ class TestTimeFilters(unittest.TestCase):
         for key, expected_hours in self.expected_filters.items():
             self.assertEqual(TIME_FILTERS[key], expected_hours)
 
-    def test_get_time_filter_options(self):
+    def test_get_time_filter_options(self) -> None:
         """Test getting list of time filter options."""
         options = get_time_filter_options()
 
@@ -57,7 +57,7 @@ class TestTimeFilters(unittest.TestCase):
         # Should not be empty
         self.assertGreater(len(options), 0)
 
-    def test_get_hours_from_filter_valid_filters(self):
+    def test_get_hours_from_filter_valid_filters(self) -> None:
         """Test converting valid time filters to hours."""
         test_cases = [
             ("Last 24h", 24),
@@ -71,7 +71,7 @@ class TestTimeFilters(unittest.TestCase):
                 result = get_hours_from_filter(filter_name)
                 self.assertEqual(result, expected_hours)
 
-    def test_get_hours_from_filter_invalid_filters(self):
+    def test_get_hours_from_filter_invalid_filters(self) -> None:
         """Test converting invalid time filters to hours."""
         invalid_filters = [
             "Invalid Filter",
@@ -83,10 +83,10 @@ class TestTimeFilters(unittest.TestCase):
 
         for invalid_filter in invalid_filters:
             with self.subTest(filter=invalid_filter):
-                result = get_hours_from_filter(invalid_filter)
+                result = get_hours_from_filter(str(invalid_filter))
                 self.assertIsNone(result)
 
-    def test_get_hours_from_filter_edge_cases(self):
+    def test_get_hours_from_filter_edge_cases(self) -> None:
         """Test edge cases for get_hours_from_filter."""
         # Test with case sensitivity
         result = get_hours_from_filter("last 24h")
@@ -100,7 +100,7 @@ class TestTimeFilters(unittest.TestCase):
         result = get_hours_from_filter("24")
         self.assertIsNone(result)
 
-    def test_get_filter_from_hours_valid_hours(self):
+    def test_get_filter_from_hours_valid_hours(self) -> None:
         """Test converting valid hours back to filter options."""
         test_cases = [
             (24, "Last 24h"),
@@ -114,7 +114,7 @@ class TestTimeFilters(unittest.TestCase):
                 result = get_filter_from_hours(hours)
                 self.assertEqual(result, expected_filter)
 
-    def test_get_filter_from_hours_invalid_hours(self):
+    def test_get_filter_from_hours_invalid_hours(self) -> None:
         """Test converting invalid hours back to filter options."""
         invalid_hours = [
             -1,  # Negative hours
@@ -132,7 +132,7 @@ class TestTimeFilters(unittest.TestCase):
                 # Should default to "Past Month" for invalid hours
                 self.assertEqual(result, "Past Month")
 
-    def test_get_filter_from_hours_edge_cases(self):
+    def test_get_filter_from_hours_edge_cases(self) -> None:
         """Test edge cases for get_filter_from_hours."""
         # Test with None (should default to "Past Month")
         result = get_filter_from_hours(None)
@@ -146,7 +146,7 @@ class TestTimeFilters(unittest.TestCase):
         result = get_filter_from_hours(-999999)
         self.assertEqual(result, "Past Month")
 
-    def test_is_time_filter_enabled_valid_filters(self):
+    def test_is_time_filter_enabled_valid_filters(self) -> None:
         """Test checking if valid time filters are enabled."""
         valid_filters = ["Last 24h", "Last 72h", "Past Week", "Past Month"]
 
@@ -155,7 +155,7 @@ class TestTimeFilters(unittest.TestCase):
                 result = is_time_filter_enabled(filter_name)
                 self.assertTrue(result)
 
-    def test_is_time_filter_enabled_invalid_filters(self):
+    def test_is_time_filter_enabled_invalid_filters(self) -> None:
         """Test checking if invalid time filters are enabled."""
         invalid_filters = [
             "Invalid Filter",
@@ -167,10 +167,10 @@ class TestTimeFilters(unittest.TestCase):
 
         for invalid_filter in invalid_filters:
             with self.subTest(filter=invalid_filter):
-                result = is_time_filter_enabled(invalid_filter)
+                result = is_time_filter_enabled(str(invalid_filter))
                 self.assertFalse(result)
 
-    def test_is_time_filter_enabled_edge_cases(self):
+    def test_is_time_filter_enabled_edge_cases(self) -> None:
         """Test edge cases for is_time_filter_enabled."""
         # Test with case sensitivity
         result = is_time_filter_enabled("last 24h")
@@ -184,7 +184,7 @@ class TestTimeFilters(unittest.TestCase):
         result = is_time_filter_enabled("24")
         self.assertFalse(result)
 
-    def test_time_filter_consistency(self):
+    def test_time_filter_consistency(self) -> None:
         """Test consistency between filter functions."""
         # Test that get_hours_from_filter and get_filter_from_hours are inverse operations
         for filter_name in TIME_FILTERS.keys():

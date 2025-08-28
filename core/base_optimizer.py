@@ -24,12 +24,12 @@ class BaseOptimizer(ABC):
     - Performance monitoring integration
     """
 
-    def __init__(self, scraper_name: str):
+    def __init__(self, scraper_name: str) -> None:
         self.scraper_name = scraper_name
         self.optimization_stats = {"optimizations_applied": 0, "time_saved": 0.0, "memory_optimizations": 0}
 
     @abstractmethod
-    def optimize_search_params(self, **params) -> Dict[str, Any]:
+    def optimize_search_params(self, **params: Any) -> Dict[str, Any]:
         """Optimize search parameters for better performance."""
         pass
 
@@ -184,7 +184,7 @@ class SearchOptimizer(BaseOptimizer):
     focusing on performance improvements that work across all scrapers.
     """
 
-    def optimize_search_params(self, **params) -> Dict[str, Any]:
+    def optimize_search_params(self, **params: Any) -> Dict[str, Any]:
         """
         Optimize search parameters for better API performance.
 

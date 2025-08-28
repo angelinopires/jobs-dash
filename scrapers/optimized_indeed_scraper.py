@@ -42,7 +42,7 @@ class OptimizedIndeedScraper(BaseScraper):
     - Clean separation of API and post-processing filters
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__("indeed")  # Initialize base scraper
         self.min_delay = 2  # Indeed-specific rate limiting
         self.optimizer = SearchOptimizer("indeed")
@@ -81,7 +81,7 @@ class OptimizedIndeedScraper(BaseScraper):
             "company_size": False,  # Post-processing only
         }
 
-    def _build_api_search_params(self, **filters) -> Dict[str, Any]:
+    def _build_api_search_params(self, **filters: Any) -> Dict[str, Any]:
         """
         Build JobSpy API parameters from user filters.
         Only includes filters that Indeed supports natively.
@@ -282,7 +282,7 @@ class OptimizedIndeedScraper(BaseScraper):
 
         return pd.Series(job_types, index=jobs_df.index)
 
-    def _format_location(self, location):
+    def _format_location(self, location: Any) -> str:
         """Format location for display."""
         if not location:
             return "N/A"
@@ -300,7 +300,7 @@ class OptimizedIndeedScraper(BaseScraper):
         except Exception:
             return str(location)
 
-    def _format_salary_from_columns(self, row):
+    def _format_salary_from_columns(self, row: Any) -> str:
         """Format salary from JobSpy columns (min_amount, max_amount, etc.)."""
         try:
             min_amount = row.get("min_amount")
@@ -333,12 +333,12 @@ class OptimizedIndeedScraper(BaseScraper):
         except Exception:
             return "Not specified"
 
-    def _format_company_info(self, row):
+    def _format_company_info(self, row: Any) -> str:
         """Format company information for display."""
         info_parts = []
 
         # Helper function to check if value is valid
-        def is_valid_value(value):
+        def is_valid_value(value: Any) -> bool:
             if value is None or pd.isna(value):
                 return False
             str_value = str(value).strip().lower()
@@ -358,7 +358,7 @@ class OptimizedIndeedScraper(BaseScraper):
 
         return " | ".join(info_parts) if info_parts else "N/A"
 
-    def _format_salary(self, compensation):
+    def _format_salary(self, compensation: Any) -> str:
         """Format salary information from JobSpy compensation field."""
         if not compensation or pd.isna(compensation):
             return "N/A"
@@ -374,7 +374,7 @@ class OptimizedIndeedScraper(BaseScraper):
         except Exception:
             return "N/A"
 
-    def _format_posted_date(self, date_posted):
+    def _format_posted_date(self, date_posted: Any) -> str:
         """Format posted date for display."""
         if not date_posted:
             return "N/A"
@@ -389,7 +389,7 @@ class OptimizedIndeedScraper(BaseScraper):
                     date_obj = dt.datetime.fromtimestamp(timestamp)
                 else:
                     parsed_date = pd.to_datetime(date_posted)
-                    return parsed_date.strftime("%b %d, %Y %I:%M %p")
+                    return str(parsed_date.strftime("%b %d, %Y %I:%M %p"))
             elif isinstance(date_posted, (int, float)):
                 timestamp = int(date_posted)
                 if timestamp > 1e10:  # Likely milliseconds
@@ -474,6 +474,6 @@ class OptimizedIndeedScraper(BaseScraper):
 
 
 # Create a function to get the scraper instance (maintains compatibility)
-def get_indeed_scraper():
+def get_indeed_scraper() -> OptimizedIndeedScraper:
     """Get an optimized Indeed scraper instance."""
     return OptimizedIndeedScraper()

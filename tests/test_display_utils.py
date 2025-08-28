@@ -17,7 +17,7 @@ from utils.display_utils import clean_company_info, clean_display_value, format_
 class TestCleanDisplayValue(unittest.TestCase):
     """Test cases for clean_display_value function."""
 
-    def test_clean_display_value_valid_strings(self):
+    def test_clean_display_value_valid_strings(self) -> None:
         """Test cleaning of valid string values."""
         test_cases = [
             ("Software Engineer", "Software Engineer"),
@@ -32,7 +32,7 @@ class TestCleanDisplayValue(unittest.TestCase):
                 result = clean_display_value(input_value)
                 self.assertEqual(result, expected)
 
-    def test_clean_display_value_nan_values(self):
+    def test_clean_display_value_nan_values(self) -> None:
         """Test cleaning of NaN and None values."""
         test_cases = [
             (np.nan, "Not available"),
@@ -45,7 +45,7 @@ class TestCleanDisplayValue(unittest.TestCase):
                 result = clean_display_value(input_value)
                 self.assertEqual(result, expected)
 
-    def test_clean_display_value_invalid_values(self):
+    def test_clean_display_value_invalid_values(self) -> None:
         """Test cleaning of invalid values."""
         test_cases = [
             ("N/A", "Not available"),
@@ -62,7 +62,7 @@ class TestCleanDisplayValue(unittest.TestCase):
                 result = clean_display_value(input_value)
                 self.assertEqual(result, expected)
 
-    def test_clean_display_value_custom_default(self):
+    def test_clean_display_value_custom_default(self) -> None:
         """Test cleaning with custom default values."""
         test_cases = [
             (np.nan, "Custom Default", "Custom Default"),
@@ -72,10 +72,10 @@ class TestCleanDisplayValue(unittest.TestCase):
 
         for input_value, default, expected in test_cases:
             with self.subTest(input=input_value, default=default):
-                result = clean_display_value(input_value, default=default)
+                result = clean_display_value(str(input_value), default=default)
                 self.assertEqual(result, expected)
 
-    def test_clean_display_value_edge_cases(self):
+    def test_clean_display_value_edge_cases(self) -> None:
         """Test cleaning with edge cases."""
         test_cases = [
             (0, "0"),  # Zero as number
@@ -86,14 +86,14 @@ class TestCleanDisplayValue(unittest.TestCase):
 
         for input_value, expected in test_cases:
             with self.subTest(input=input_value):
-                result = clean_display_value(input_value)
+                result = clean_display_value(str(input_value))
                 self.assertEqual(result, expected)
 
 
 class TestCleanCompanyInfo(unittest.TestCase):
     """Test cases for clean_company_info function."""
 
-    def test_clean_company_info_valid_data(self):
+    def test_clean_company_info_valid_data(self) -> None:
         """Test cleaning of valid company info strings."""
         test_cases = [
             (
@@ -109,7 +109,7 @@ class TestCleanCompanyInfo(unittest.TestCase):
                 result = clean_company_info(input_value)
                 self.assertEqual(result, expected)
 
-    def test_clean_company_info_with_nan_values(self):
+    def test_clean_company_info_with_nan_values(self) -> None:
         """Test cleaning of company info with NaN values."""
         test_cases = [
             ("Industry: Technology | Size: nan | Revenue: $10M+", "Industry: Technology | Revenue: $10M+"),
@@ -122,7 +122,7 @@ class TestCleanCompanyInfo(unittest.TestCase):
                 result = clean_company_info(input_value)
                 self.assertEqual(result, expected)
 
-    def test_clean_company_info_invalid_inputs(self):
+    def test_clean_company_info_invalid_inputs(self) -> None:
         """Test cleaning of invalid company info inputs."""
         test_cases = [
             (np.nan, "Not available"),
@@ -135,10 +135,10 @@ class TestCleanCompanyInfo(unittest.TestCase):
 
         for input_value, expected in test_cases:
             with self.subTest(input=input_value):
-                result = clean_company_info(input_value)
+                result = clean_company_info(str(input_value))
                 self.assertEqual(result, expected)
 
-    def test_clean_company_info_malformed_strings(self):
+    def test_clean_company_info_malformed_strings(self) -> None:
         """Test cleaning of malformed company info strings."""
         test_cases = [
             ("Industry: | Size: 100-500", "Size: 100-500"),  # Missing value after colon
@@ -155,11 +155,11 @@ class TestCleanCompanyInfo(unittest.TestCase):
 class TestFormatPostedDateEnhanced(unittest.TestCase):
     """Test cases for format_posted_date_enhanced function."""
 
-    def test_format_posted_date_enhanced_valid_dates(self):
+    def test_format_posted_date_enhanced_valid_dates(self) -> None:
         """Test formatting of valid date values."""
         # Test with datetime objects
         now = datetime.now()
-        result = format_posted_date_enhanced(now)
+        result = format_posted_date_enhanced(str(now))
         self.assertIsInstance(result, str)
         self.assertIn(now.strftime("%b"), result)  # Should contain month abbreviation
 
@@ -173,20 +173,20 @@ class TestFormatPostedDateEnhanced(unittest.TestCase):
         result = format_posted_date_enhanced(formatted_date)
         self.assertEqual(result, formatted_date)
 
-    def test_format_posted_date_enhanced_timestamps(self):
+    def test_format_posted_date_enhanced_timestamps(self) -> None:
         """Test formatting of timestamp values."""
         # Test with Unix timestamp (seconds)
         timestamp_seconds = int(datetime.now().timestamp())
-        result = format_posted_date_enhanced(timestamp_seconds)
+        result = format_posted_date_enhanced(str(timestamp_seconds))
         self.assertIsInstance(result, str)
         self.assertIn("2025", result)  # Should contain current year
 
         # Test with milliseconds timestamp
         timestamp_ms = int(datetime.now().timestamp() * 1000)
-        result = format_posted_date_enhanced(timestamp_ms)
+        result = format_posted_date_enhanced(str(timestamp_ms))
         self.assertIsInstance(result, str)
 
-    def test_format_posted_date_enhanced_invalid_inputs(self):
+    def test_format_posted_date_enhanced_invalid_inputs(self) -> None:
         """Test formatting of invalid date inputs."""
         test_cases = [
             (np.nan, "N/A"),
@@ -200,26 +200,26 @@ class TestFormatPostedDateEnhanced(unittest.TestCase):
 
         for input_value, expected in test_cases:
             with self.subTest(input=input_value):
-                result = format_posted_date_enhanced(input_value)
+                result = format_posted_date_enhanced(str(input_value))
                 self.assertEqual(result, expected)
 
-    def test_format_posted_date_enhanced_edge_cases(self):
+    def test_format_posted_date_enhanced_edge_cases(self) -> None:
         """Test formatting with edge cases."""
         # Test with zero timestamp
-        result = format_posted_date_enhanced(0)
+        result = format_posted_date_enhanced(str(0))
         self.assertIsInstance(result, str)
 
         # Test with very large timestamp
         large_timestamp = 9999999999999
-        result = format_posted_date_enhanced(large_timestamp)
+        result = format_posted_date_enhanced(str(large_timestamp))
         self.assertIsInstance(result, str)
 
         # Test with negative timestamp
         negative_timestamp = -1000
-        result = format_posted_date_enhanced(negative_timestamp)
+        result = format_posted_date_enhanced(str(negative_timestamp))
         self.assertIsInstance(result, str)
 
-    def test_format_posted_date_enhanced_string_formats(self):
+    def test_format_posted_date_enhanced_string_formats(self) -> None:
         """Test formatting of various string date formats."""
         test_cases = [
             ("2025-08-23", "Aug 23, 2025"),  # ISO format

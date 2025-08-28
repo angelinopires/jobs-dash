@@ -13,7 +13,7 @@ import sys
 import unittest
 
 
-def check_venv():
+def check_venv() -> bool:
     """Check if virtual environment is activated."""
     venv_path = os.environ.get("VIRTUAL_ENV")
     if not venv_path:
@@ -27,7 +27,7 @@ def check_venv():
     return True
 
 
-def run_nan_prevention_tests():
+def run_nan_prevention_tests() -> bool:
     """Run all nan prevention tests and display results."""
     print("🧪 Running NaN Prevention Test Suite")
     print("=" * 50)
@@ -96,7 +96,7 @@ def run_nan_prevention_tests():
         return False
 
 
-def run_quick_nan_check():
+def run_quick_nan_check() -> bool:
     """Run a quick check for common nan issues."""
     print("\n🔍 Quick NaN Check")
     print("-" * 20)
@@ -114,7 +114,7 @@ def run_quick_nan_check():
 
         print("Testing display functions with problematic values...")
         for value in problematic_values:
-            result1 = clean_display_value(value)
+            result1 = clean_display_value(str(value))
             result2 = clean_company_info(f"Industry: {value} | Size: {value}")
 
             if "nan" in str(result1).lower() or "nan" in str(result2).lower():

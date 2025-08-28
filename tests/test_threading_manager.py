@@ -10,6 +10,7 @@ Tests:
 """
 
 import unittest
+from typing import Any, Dict
 from unittest.mock import Mock
 
 import pandas as pd
@@ -20,7 +21,7 @@ from core.threading_manager import SearchResult, SearchTask, ThreadingManager
 class TestThreadingManager(unittest.TestCase):
     """Test cases for ThreadingManager parallel processing."""
 
-    def setUp(self):
+    def setUp(self) -> None:
         """Set up test fixtures."""
         self.threading_manager = ThreadingManager(max_workers=2, timeout_per_country=10)
 
@@ -35,7 +36,7 @@ class TestThreadingManager(unittest.TestCase):
             }
         )
 
-    def test_init(self):
+    def test_init(self) -> None:
         """Test ThreadingManager initialization."""
         self.assertEqual(self.threading_manager.max_workers, 2)
         self.assertEqual(self.threading_manager.timeout_per_country, 10)
@@ -43,7 +44,7 @@ class TestThreadingManager(unittest.TestCase):
         self.assertEqual(self.threading_manager.successful_searches, 0)
         self.assertEqual(self.threading_manager.failed_searches, 0)
 
-    def test_empty_countries_list(self):
+    def test_empty_countries_list(self) -> None:
         """Test handling of empty countries list."""
         mock_search_func = Mock()
         mock_progress_callback = Mock()
@@ -64,7 +65,7 @@ class TestThreadingManager(unittest.TestCase):
         # Should not call search function
         mock_search_func.assert_not_called()
 
-    def test_single_country_search(self):
+    def test_single_country_search(self) -> None:
         """Test parallel search with single country."""
         mock_search_func = Mock()
         mock_progress_callback = Mock()
@@ -92,13 +93,13 @@ class TestThreadingManager(unittest.TestCase):
         self.assertEqual(call_args[1]["search_term"], "Software Engineer")
         self.assertEqual(call_args[1]["where"], "United States")
 
-    def test_multiple_countries_parallel(self):
+    def test_multiple_countries_parallel(self) -> None:
         """Test parallel search across multiple countries."""
         mock_search_func = Mock()
         mock_progress_callback = Mock()
 
         # Mock different results for different countries
-        def mock_search(**kwargs):
+        def mock_search(**kwargs: Any) -> Dict[str, Any]:
             country = kwargs.get("where")
             if country == "United States":
                 return {"success": True, "jobs": self.sample_jobs, "count": 2, "search_time": 1.0}
@@ -139,7 +140,7 @@ class TestThreadingManager(unittest.TestCase):
         # Verify search function was called for each country
         self.assertEqual(mock_search_func.call_count, 3)
 
-    def test_failed_country_search(self):
+    def test_failed_country_search(self) -> None:
         """Test handling of failed country searches."""
         mock_search_func = Mock()
         mock_progress_callback = Mock()
@@ -159,7 +160,7 @@ class TestThreadingManager(unittest.TestCase):
         self.assertEqual(result["metadata"]["countries_searched"], 0)
         self.assertEqual(result["metadata"]["failed_countries"], 1)
 
-    def test_exception_handling(self):
+    def test_exception_handling(self) -> None:
         """Test handling of exceptions during search."""
         mock_search_func = Mock()
         mock_progress_callback = Mock()
@@ -179,7 +180,7 @@ class TestThreadingManager(unittest.TestCase):
         self.assertEqual(result["metadata"]["countries_searched"], 0)
         self.assertEqual(result["metadata"]["failed_countries"], 1)
 
-    def test_progress_callback(self):
+    def test_progress_callback(self) -> None:
         """Test that progress callbacks are called correctly."""
         mock_search_func = Mock()
         mock_progress_callback = Mock()
@@ -232,7 +233,7 @@ class TestThreadingManager(unittest.TestCase):
         self.assertIn("🎉 Parallel search complete", final_call[0][0])
         self.assertEqual(final_call[0][1], 1.0)
 
-    def test_duplicate_removal(self):
+    def test_duplicate_removal(self) -> None:
         """Test that duplicate jobs are removed based on job_url."""
         mock_search_func = Mock()
         mock_progress_callback = Mock()
@@ -254,7 +255,7 @@ class TestThreadingManager(unittest.TestCase):
             }
         )
 
-        def mock_search(**kwargs):
+        def mock_search(**kwargs: Any) -> Dict[str, Any]:
             country = kwargs.get("where")
             if country == "Country1":
                 return {"success": True, "jobs": jobs1, "count": 2}
@@ -273,7 +274,7 @@ class TestThreadingManager(unittest.TestCase):
         # Should have 3 unique jobs (Job 1, Job 2, Job 3)
         self.assertEqual(result["count"], 3)
 
-    def test_performance_stats(self):
+    def test_performance_stats(self) -> None:
         """Test performance statistics tracking."""
         mock_search_func = Mock()
         mock_progress_callback = Mock()
@@ -299,7 +300,7 @@ class TestThreadingManager(unittest.TestCase):
         self.assertGreater(stats["total_search_time"], 0)
         self.assertEqual(stats["max_workers"], 2)
 
-    def test_reset_stats(self):
+    def test_reset_stats(self) -> None:
         """Test resetting performance statistics."""
         mock_search_func = Mock()
         mock_progress_callback = Mock()
@@ -328,7 +329,7 @@ class TestThreadingManager(unittest.TestCase):
         self.assertEqual(stats_after["failed_searches"], 0)
         self.assertEqual(stats_after["total_search_time"], 0.0)
 
-    def test_search_task_dataclass(self):
+    def test_search_task_dataclass(self) -> None:
         """Test SearchTask dataclass functionality."""
         task = SearchTask(
             country="Test Country",
@@ -344,7 +345,7 @@ class TestThreadingManager(unittest.TestCase):
         self.assertEqual(task.time_filter, "24h")
         self.assertEqual(task.task_id, "test_123")
 
-    def test_search_result_dataclass(self):
+    def test_search_result_dataclass(self) -> None:
         """Test SearchResult dataclass functionality."""
         result = SearchResult(
             country="Test Country",
@@ -357,6 +358,8 @@ class TestThreadingManager(unittest.TestCase):
 
         self.assertEqual(result.country, "Test Country")
         self.assertTrue(result.success)
+        self.assertIsNotNone(result.jobs)
+        assert result.jobs is not None  # Type guard for linter
         self.assertEqual(len(result.jobs), 2)
         self.assertEqual(result.search_time, 1.5)
         self.assertEqual(result.jobs_count, 2)

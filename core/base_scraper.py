@@ -27,12 +27,12 @@ class BaseScraper(ABC):
     - Common error handling and fallback strategies
     """
 
-    def __init__(self, scraper_name: str):
+    def __init__(self, scraper_name: str) -> None:
         self.scraper_name = scraper_name
         self.performance_monitor = PerformanceMonitor(scraper_name)
         self.cache_manager = CacheManager()
         self.threading_manager = ThreadingManager(max_workers=4)  # Phase 2: Parallel processing
-        self.last_search_time = 0
+        self.last_search_time = 0.0
         self.min_delay = 1.0  # Minimum delay between API calls
 
     # Abstract methods that each scraper must implement
@@ -48,7 +48,7 @@ class BaseScraper(ABC):
         pass
 
     @abstractmethod
-    def _build_api_search_params(self, **filters) -> Dict[str, Any]:
+    def _build_api_search_params(self, **filters: Any) -> Dict[str, Any]:
         """Build search parameters for the scraping API."""
         pass
 
@@ -58,7 +58,7 @@ class BaseScraper(ABC):
         pass
 
     def search_jobs(
-        self, search_term: str = "", where: str = "", include_remote: bool = True, **kwargs
+        self, search_term: str = "", where: str = "", include_remote: bool = True, **kwargs: Any
     ) -> Dict[str, Any]:
         """
         Main search interface with built-in optimizations.
@@ -115,7 +115,7 @@ class BaseScraper(ABC):
             }
 
     def _search_single_country_optimized(
-        self, search_term: str, country: str, include_remote: bool, **kwargs
+        self, search_term: str, country: str, include_remote: bool, **kwargs: Any
     ) -> Dict[str, Any]:
         """Optimized single-country search with caching."""
 
@@ -186,7 +186,7 @@ class BaseScraper(ABC):
         return result
 
     def _search_global_optimized(
-        self, search_term: str, include_remote: bool, progress_callback: Optional[Callable], **kwargs
+        self, search_term: str, include_remote: bool, progress_callback: Optional[Callable], **kwargs: Any
     ) -> Dict[str, Any]:
         """
         Phase 2: Parallel global search with ThreadPoolExecutor.
@@ -265,7 +265,7 @@ class BaseScraper(ABC):
         """
         return jobs_df
 
-    def _apply_rate_limiting(self):
+    def _apply_rate_limiting(self) -> None:
         """Apply rate limiting between API calls."""
         current_time = time.time()
         time_since_last = current_time - self.last_search_time
@@ -290,6 +290,6 @@ class BaseScraper(ABC):
         """Get threading-specific performance statistics."""
         return self.threading_manager.get_performance_stats()
 
-    def clear_cache(self):
+    def clear_cache(self) -> None:
         """Clear all cached results for this scraper."""
         self.cache_manager.clear_scraper_cache(self.scraper_name)

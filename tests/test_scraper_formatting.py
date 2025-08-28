@@ -6,6 +6,7 @@ Tests the _format_company_info and other formatting functions in IndeedScraper.
 import os
 import sys
 import unittest
+from typing import Any, Dict
 
 import numpy as np
 import pandas as pd
@@ -19,11 +20,11 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 class TestIndeedScraperFormatting(unittest.TestCase):
     """Test Indeed scraper formatting functions for proper nan handling."""
 
-    def setUp(self):
+    def setUp(self) -> None:
         """Set up test fixtures."""
         self.scraper = get_indeed_scraper()
 
-    def test_format_company_info_valid_data(self):
+    def test_format_company_info_valid_data(self) -> None:
         """Test _format_company_info with valid company data."""
         # Test with all valid fields
         row_all_valid = {
@@ -45,7 +46,7 @@ class TestIndeedScraperFormatting(unittest.TestCase):
         result = self.scraper._format_company_info(row_two)
         self.assertEqual(result, "Industry: Finance | Size: 1000+")
 
-    def test_format_company_info_invalid_data(self):
+    def test_format_company_info_invalid_data(self) -> None:
         """Test _format_company_info with invalid/nan data."""
         # Test with all nan values
         row_all_nan = {"company_industry": np.nan, "company_num_employees": np.nan, "company_revenue": np.nan}
@@ -67,7 +68,7 @@ class TestIndeedScraperFormatting(unittest.TestCase):
         result = self.scraper._format_company_info(row_empty)
         self.assertEqual(result, "N/A")
 
-    def test_format_company_info_mixed_data(self):
+    def test_format_company_info_mixed_data(self) -> None:
         """Test _format_company_info with mixed valid/invalid data."""
         # Test with some valid, some invalid
         row_mixed1 = {"company_industry": "Technology", "company_num_employees": "nan", "company_revenue": "$100M+"}
@@ -82,10 +83,10 @@ class TestIndeedScraperFormatting(unittest.TestCase):
         result = self.scraper._format_company_info(row_mixed3)
         self.assertEqual(result, "Industry: Healthcare")
 
-    def test_format_company_info_edge_cases(self):
+    def test_format_company_info_edge_cases(self) -> None:
         """Test _format_company_info with edge cases."""
         # Test with missing keys
-        row_missing = {}
+        row_missing: Dict[str, Any] = {}
         result = self.scraper._format_company_info(row_missing)
         self.assertEqual(result, "N/A")
 
@@ -104,7 +105,7 @@ class TestIndeedScraperFormatting(unittest.TestCase):
         expected = "Industry: Financial Services | Size: Management team of 5 | Revenue: Annual revenue varies"
         self.assertEqual(result, expected)
 
-    def test_format_company_info_case_insensitive(self):
+    def test_format_company_info_case_insensitive(self) -> None:
         """Test _format_company_info handles case-insensitive invalid values."""
         # Test various case combinations of invalid values
         test_cases = [
@@ -124,11 +125,11 @@ class TestIndeedScraperFormatting(unittest.TestCase):
 class TestIndeedScraperFormattingIntegration(unittest.TestCase):
     """Integration tests for scraper formatting functions."""
 
-    def setUp(self):
+    def setUp(self) -> None:
         """Set up test fixtures."""
         self.scraper = get_indeed_scraper()
 
-    def test_process_jobs_with_nan_data(self):
+    def test_process_jobs_with_nan_data(self) -> None:
         """Test that _process_jobs handles nan company data properly."""
         # Create a mock DataFrame with nan company data
         jobs_data = pd.DataFrame(
@@ -176,7 +177,7 @@ class TestIndeedScraperFormattingIntegration(unittest.TestCase):
         second_job_info = processed_jobs.iloc[1]["company_info"]
         self.assertEqual(second_job_info, "Not available")
 
-    def test_salary_formatting_with_nan(self):
+    def test_salary_formatting_with_nan(self) -> None:
         """Test salary formatting handles nan values properly."""
         # Test _format_salary_from_columns with nan values
         row_with_nan = {"min_amount": np.nan, "max_amount": 120000, "currency": "USD", "interval": "yearly"}
@@ -192,11 +193,11 @@ class TestIndeedScraperFormattingIntegration(unittest.TestCase):
 class TestFormattingPreventionSuite(unittest.TestCase):
     """Comprehensive test suite to prevent nan formatting issues."""
 
-    def setUp(self):
+    def setUp(self) -> None:
         """Set up test fixtures."""
         self.scraper = get_indeed_scraper()
 
-    def test_all_formatting_functions_handle_nan(self):
+    def test_all_formatting_functions_handle_nan(self) -> None:
         """Test that all formatting functions properly handle nan values."""
         # Test data with various nan-like values
         nan_values = [None, np.nan, pd.NA, "nan", "NaN", "none", "None", "null", "NULL", "", "   ", "n/a", "N/A"]
@@ -230,7 +231,7 @@ class TestFormattingPreventionSuite(unittest.TestCase):
             salary_result = self.scraper._format_salary_from_columns(salary_row)
             self.assertNotIn("nan", salary_result.lower(), f"Found 'nan' in salary result for value: {nan_value}")
 
-    def test_regression_prevention(self):
+    def test_regression_prevention(self) -> None:
         """Regression test to ensure the specific reported issue doesn't reoccur."""
         # This tests the exact scenario that was reported
         problematic_row = {"company_industry": "nan", "company_num_employees": "nan", "company_revenue": "nan"}

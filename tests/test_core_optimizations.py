@@ -25,16 +25,16 @@ from core.performance_monitor import PerformanceMonitor
 class TestCacheManager(unittest.TestCase):
     """Test the hybrid caching system."""
 
-    def setUp(self):
+    def setUp(self) -> None:
         """Set up test environment with temporary cache directory."""
         self.temp_dir = tempfile.mkdtemp()
         self.cache_manager = CacheManager(cache_ttl_minutes=1, cache_dir=self.temp_dir)
 
-    def tearDown(self):
+    def tearDown(self) -> None:
         """Clean up temporary files."""
         shutil.rmtree(self.temp_dir)
 
-    def test_cache_key_generation(self):
+    def test_cache_key_generation(self) -> None:
         """Test that cache keys are generated consistently."""
         key1 = self.cache_manager.generate_cache_key(
             scraper="indeed", search_term="Software Engineer", country="United States", include_remote=True
@@ -75,7 +75,7 @@ class TestCacheManager(unittest.TestCase):
         self.assertNotEqual(key4, key5)
         self.assertNotEqual(key1, key4)  # Should be different from key without time_filter
 
-    def test_cache_storage_and_retrieval(self):
+    def test_cache_storage_and_retrieval(self) -> None:
         """Test storing and retrieving cached results."""
         # Create test result
         test_result = {
@@ -94,14 +94,15 @@ class TestCacheManager(unittest.TestCase):
         retrieved = self.cache_manager.get_cached_result(cache_key)
 
         self.assertIsNotNone(retrieved)
+        assert retrieved is not None  # Type guard for linter
         self.assertEqual(retrieved["success"], True)
         self.assertEqual(retrieved["count"], 1)
         self.assertIsInstance(retrieved["jobs"], pd.DataFrame)
 
-    def test_cache_expiration(self):
+    def test_cache_expiration(self) -> None:
         """Test that cache entries expire after TTL."""
         # Use very short TTL for testing
-        short_cache = CacheManager(cache_ttl_minutes=0.01, cache_dir=self.temp_dir)  # 0.6 seconds
+        short_cache = CacheManager(cache_ttl_minutes=0.001, cache_dir=self.temp_dir)  # ~3.6 seconds for testing
 
         test_result = {"success": True, "count": 1}
         cache_key = "expire_test"
@@ -124,11 +125,11 @@ class TestCacheManager(unittest.TestCase):
 class TestPerformanceMonitor(unittest.TestCase):
     """Test the performance monitoring system."""
 
-    def setUp(self):
+    def setUp(self) -> None:
         """Set up performance monitor for testing."""
         self.monitor = PerformanceMonitor("test_scraper")
 
-    def test_search_tracking(self):
+    def test_search_tracking(self) -> None:
         """Test search start/end tracking."""
         # Start a search
         self.monitor.start_search("Test Job", "United States", True)
@@ -146,7 +147,7 @@ class TestPerformanceMonitor(unittest.TestCase):
         self.assertEqual(stats["success_rate"], 100.0)
         self.assertEqual(stats["total_jobs_found"], 10)
 
-    def test_performance_stats(self):
+    def test_performance_stats(self) -> None:
         """Test performance statistics calculation."""
         # Simulate multiple searches
         searches = [
@@ -171,11 +172,11 @@ class TestPerformanceMonitor(unittest.TestCase):
 class TestSearchOptimizer(unittest.TestCase):
     """Test the search optimization functionality."""
 
-    def setUp(self):
+    def setUp(self) -> None:
         """Set up search optimizer for testing."""
         self.optimizer = SearchOptimizer("test_scraper")
 
-    def test_search_param_optimization(self):
+    def test_search_param_optimization(self) -> None:
         """Test search parameter optimization."""
         # Test global search optimization
         global_params = {
@@ -200,7 +201,7 @@ class TestSearchOptimizer(unittest.TestCase):
         # Should keep higher limit for single country
         self.assertEqual(optimized_country["results_wanted"], 800)
 
-    def test_result_processing_optimization(self):
+    def test_result_processing_optimization(self) -> None:
         """Test result processing optimization."""
         # Create test DataFrame
         test_jobs = pd.DataFrame(
@@ -222,7 +223,7 @@ class TestSearchOptimizer(unittest.TestCase):
         # Should have optimized dtypes (company remains object for compatibility)
         self.assertEqual(optimized_jobs["company"].dtype.name, "object")
 
-    def test_memory_optimization(self):
+    def test_memory_optimization(self) -> None:
         """Test memory optimization for large datasets."""
         # Create list of test DataFrames
         jobs_list = [
@@ -239,7 +240,7 @@ class TestSearchOptimizer(unittest.TestCase):
         # Should optimize dtypes (company remains object for compatibility)
         self.assertEqual(combined["company"].dtype.name, "object")
 
-    def test_duplicate_removal(self):
+    def test_duplicate_removal(self) -> None:
         """Test optimized duplicate removal."""
         # Create DataFrame with duplicates
         test_jobs = pd.DataFrame(

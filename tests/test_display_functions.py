@@ -19,19 +19,19 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 class TestDisplayFunctions(unittest.TestCase):
     """Test dashboard display functions for proper nan handling."""
 
-    def test_clean_display_value_valid_strings(self):
+    def test_clean_display_value_valid_strings(self) -> None:
         """Test clean_display_value with valid string values."""
         self.assertEqual(clean_display_value("Software Engineer"), "Software Engineer")
         self.assertEqual(clean_display_value("Google Inc."), "Google Inc.")
         self.assertEqual(clean_display_value("Remote, US"), "Remote, US")
         self.assertEqual(clean_display_value("$100,000"), "$100,000")
 
-    def test_clean_display_value_invalid_values(self):
+    def test_clean_display_value_invalid_values(self) -> None:
         """Test clean_display_value with invalid/nan values."""
         # Test various forms of None/nan
-        self.assertEqual(clean_display_value(None), "Not available")
-        self.assertEqual(clean_display_value(pd.NA), "Not available")
-        self.assertEqual(clean_display_value(np.nan), "Not available")
+        self.assertEqual(clean_display_value(str(None)), "Not available")
+        self.assertEqual(clean_display_value(str(pd.NA)), "Not available")
+        self.assertEqual(clean_display_value(str(np.nan)), "Not available")
 
         # Test string representations of invalid values
         self.assertEqual(clean_display_value("nan"), "Not available")
@@ -46,25 +46,25 @@ class TestDisplayFunctions(unittest.TestCase):
         self.assertEqual(clean_display_value(""), "Not available")
         self.assertEqual(clean_display_value("   "), "Not available")
 
-    def test_clean_display_value_custom_default(self):
+    def test_clean_display_value_custom_default(self) -> None:
         """Test clean_display_value with custom default value."""
-        self.assertEqual(clean_display_value(None, "Custom Default"), "Custom Default")
+        self.assertEqual(clean_display_value(str(None), "Custom Default"), "Custom Default")
         self.assertEqual(clean_display_value("nan", "Missing Data"), "Missing Data")
         self.assertEqual(clean_display_value("", "Empty"), "Empty")
 
-    def test_clean_display_value_edge_cases(self):
+    def test_clean_display_value_edge_cases(self) -> None:
         """Test clean_display_value with edge cases."""
         # Test numbers that should be preserved
-        self.assertEqual(clean_display_value(0), "0")
-        self.assertEqual(clean_display_value(42), "42")
-        self.assertEqual(clean_display_value(3.14), "3.14")
+        self.assertEqual(clean_display_value(str(0)), "0")
+        self.assertEqual(clean_display_value(str(42)), "42")
+        self.assertEqual(clean_display_value(str(3.14)), "3.14")
 
         # Test strings that contain nan but are valid
         self.assertEqual(clean_display_value("banana"), "banana")
         self.assertEqual(clean_display_value("finance"), "finance")
         self.assertEqual(clean_display_value("nano technology"), "nano technology")
 
-    def test_clean_company_info_valid_data(self):
+    def test_clean_company_info_valid_data(self) -> None:
         """Test clean_company_info with valid company information."""
         # Test with all valid data
         valid_info = "Industry: Technology | Size: 100-500 | Revenue: $10M-50M"
@@ -77,20 +77,20 @@ class TestDisplayFunctions(unittest.TestCase):
         mixed_info = "Industry: Finance | Size: 1000+ employees"
         self.assertEqual(clean_company_info(mixed_info), mixed_info)
 
-    def test_clean_company_info_invalid_data(self):
+    def test_clean_company_info_invalid_data(self) -> None:
         """Test clean_company_info with invalid/nan company information."""
         # Test completely invalid data
         self.assertEqual(clean_company_info("Industry: nan | Size: nan | Revenue: nan"), "Not available")
         self.assertEqual(clean_company_info("Industry: none | Size: null | Revenue: n/a"), "Not available")
 
         # Test None/nan values
-        self.assertEqual(clean_company_info(None), "Not available")
-        self.assertEqual(clean_company_info(pd.NA), "Not available")
-        self.assertEqual(clean_company_info(np.nan), "Not available")
+        self.assertEqual(clean_company_info(str(None)), "Not available")
+        self.assertEqual(clean_company_info(str(pd.NA)), "Not available")
+        self.assertEqual(clean_company_info(str(np.nan)), "Not available")
         self.assertEqual(clean_company_info("nan"), "Not available")
         self.assertEqual(clean_company_info(""), "Not available")
 
-    def test_clean_company_info_mixed_data(self):
+    def test_clean_company_info_mixed_data(self) -> None:
         """Test clean_company_info with mix of valid and invalid data."""
         # Test with some valid, some invalid
         mixed_invalid = "Industry: Technology | Size: nan | Revenue: null"
@@ -102,7 +102,7 @@ class TestDisplayFunctions(unittest.TestCase):
         mixed_invalid3 = "Industry: Healthcare | Size: none | Revenue: $1B+"
         self.assertEqual(clean_company_info(mixed_invalid3), "Industry: Healthcare | Revenue: $1B+")
 
-    def test_clean_company_info_edge_cases(self):
+    def test_clean_company_info_edge_cases(self) -> None:
         """Test clean_company_info with edge cases."""
         # Test malformed strings
         self.assertEqual(clean_company_info("InvalidFormat"), "Not available")
@@ -113,7 +113,7 @@ class TestDisplayFunctions(unittest.TestCase):
         valid_with_nan_substring = "Industry: Financial Services | Size: Management"
         self.assertEqual(clean_company_info(valid_with_nan_substring), valid_with_nan_substring)
 
-    def test_clean_company_info_whitespace_handling(self):
+    def test_clean_company_info_whitespace_handling(self) -> None:
         """Test clean_company_info handles whitespace properly."""
         # Test with extra whitespace
         whitespace_info = "  Industry: Technology  |  Size: 100-500  |  Revenue: $10M+  "
@@ -128,7 +128,7 @@ class TestDisplayFunctions(unittest.TestCase):
 class TestDisplayFunctionsIntegration(unittest.TestCase):
     """Integration tests for display functions with real-world data scenarios."""
 
-    def test_job_details_scenario(self):
+    def test_job_details_scenario(self) -> None:
         """Test realistic job details scenario."""
         # Simulate a job record with mixed data quality
         job_data = {
@@ -149,7 +149,7 @@ class TestDisplayFunctionsIntegration(unittest.TestCase):
         self.assertEqual(clean_company_info(job_data["company_info"]), "Industry: Technology | Revenue: $50M+")
         self.assertEqual(clean_display_value(job_data["job_type"]), "Full-time")
 
-    def test_empty_job_scenario(self):
+    def test_empty_job_scenario(self) -> None:
         """Test scenario with mostly empty/invalid job data."""
         empty_job = {
             "title": None,

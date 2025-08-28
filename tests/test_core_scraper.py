@@ -8,7 +8,7 @@ Focuses on essential paths rather than exhaustive edge cases.
 import os
 import sys
 import unittest
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pandas as pd
 
@@ -21,11 +21,11 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 class TestScraperCore(unittest.TestCase):
     """Test core scraper functionality."""
 
-    def setUp(self):
+    def setUp(self) -> None:
         """Set up test fixtures."""
         self.scraper = get_indeed_scraper()
 
-    def test_scraper_initialization(self):
+    def test_scraper_initialization(self) -> None:
         """Test that scraper initializes properly."""
         self.assertIsNotNone(self.scraper)
         # Should have required methods
@@ -33,7 +33,7 @@ class TestScraperCore(unittest.TestCase):
         self.assertTrue(hasattr(self.scraper, "_process_jobs"))
 
     @patch("scrapers.optimized_indeed_scraper.OptimizedIndeedScraper.search_jobs")
-    def test_search_jobs_interface(self, mock_search):
+    def test_search_jobs_interface(self, mock_search: MagicMock) -> None:
         """Test the main search_jobs interface."""
         # Mock successful search
         mock_search.return_value = {
@@ -54,7 +54,7 @@ class TestScraperCore(unittest.TestCase):
         self.assertIn("count", result)
         self.assertIn("search_time", result)
 
-    def test_job_processing_adds_required_columns(self):
+    def test_job_processing_adds_required_columns(self) -> None:
         """Test that job processing adds all required columns."""
         raw_jobs = pd.DataFrame(
             {
@@ -83,7 +83,7 @@ class TestScraperCore(unittest.TestCase):
         for col in required_columns:
             self.assertIn(col, processed.columns)
 
-    def test_company_info_formatting(self):
+    def test_company_info_formatting(self) -> None:
         """Test company info formatting from raw data."""
         raw_row = {"company_industry": "Technology", "company_num_employees": "100-500", "company_revenue": "$10M-50M"}
 
@@ -94,7 +94,7 @@ class TestScraperCore(unittest.TestCase):
         self.assertIn("Size: 100-500", result)
         self.assertIn("Revenue: $10M-50M", result)
 
-    def test_company_info_handles_missing_data(self):
+    def test_company_info_handles_missing_data(self) -> None:
         """Test company info formatting with missing data."""
         incomplete_row = {"company_industry": "Technology", "company_num_employees": None, "company_revenue": None}
 
@@ -107,14 +107,14 @@ class TestScraperCore(unittest.TestCase):
 class TestCountrySupport(unittest.TestCase):
     """Test country and location support."""
 
-    def setUp(self):
+    def setUp(self) -> None:
         """Set up test fixtures."""
         from config.countries import get_country_options, get_indeed_country_name
 
         self.get_country_options = get_country_options
         self.get_indeed_country_name = get_indeed_country_name
 
-    def test_country_options_structure(self):
+    def test_country_options_structure(self) -> None:
         """Test that country options are properly structured."""
         options = self.get_country_options()
 
@@ -123,7 +123,7 @@ class TestCountrySupport(unittest.TestCase):
         self.assertIn("United States", options)
         self.assertIn("Global", options)
 
-    def test_indeed_country_mapping(self):
+    def test_indeed_country_mapping(self) -> None:
         """Test mapping of countries to Indeed country codes."""
         # Test common countries
         test_cases = [("United States", "usa"), ("United Kingdom", "uk"), ("Canada", "canada")]

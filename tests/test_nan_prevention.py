@@ -7,6 +7,7 @@ properly handle various forms of invalid/missing data.
 import os
 import sys
 import unittest
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -21,8 +22,13 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 class TestNanPreventionSuite(unittest.TestCase):
     """Comprehensive test suite to prevent nan values from appearing in the UI."""
 
+    # Class attributes (populated in setUpClass)
+    invalid_values: list
+    valid_values: list
+    scraper: Any
+
     @classmethod
-    def setUpClass(cls):
+    def setUpClass(cls) -> None:
         """Set up test fixtures for the class."""
         from scrapers.optimized_indeed_scraper import get_indeed_scraper
 
@@ -78,28 +84,28 @@ class TestNanPreventionSuite(unittest.TestCase):
             False,  # Boolean false
         ]
 
-    def test_clean_display_value_never_shows_nan(self):
+    def test_clean_display_value_never_shows_nan(self) -> None:
         """Test that clean_display_value never returns any form of 'nan'."""
         for invalid_value in self.invalid_values:
             with self.subTest(value=invalid_value):
-                result = clean_display_value(invalid_value)
+                result = clean_display_value(str(invalid_value))
                 self.assertNotIn("nan", str(result).lower())
                 self.assertNotIn("none", str(result).lower())
                 self.assertNotIn("null", str(result).lower())
                 # Should return the default
                 self.assertEqual(result, "Not available")
 
-    def test_clean_display_value_preserves_valid_data(self):
+    def test_clean_display_value_preserves_valid_data(self) -> None:
         """Test that clean_display_value preserves valid data."""
         for valid_value in self.valid_values:
             with self.subTest(value=valid_value):
-                result = clean_display_value(valid_value)
+                result = clean_display_value(str(valid_value))
                 # Should not be cleaned to "Not available"
                 self.assertNotEqual(result, "Not available")
                 # Should preserve the original value (as string)
                 self.assertEqual(result, str(valid_value))
 
-    def test_clean_company_info_never_shows_nan(self):
+    def test_clean_company_info_never_shows_nan(self) -> None:
         """Test that clean_company_info never returns any form of 'nan'."""
         # Test with various combinations of invalid company data
         for invalid_value in self.invalid_values:
@@ -113,12 +119,12 @@ class TestNanPreventionSuite(unittest.TestCase):
 
             for test_string in test_strings:
                 with self.subTest(value=test_string):
-                    result = clean_company_info(test_string)
+                    result = clean_company_info(str(test_string))
                     self.assertNotIn("nan", str(result).lower())
                     self.assertNotIn("none", str(result).lower())
                     self.assertNotIn("null", str(result).lower())
 
-    def test_scraper_format_company_info_never_shows_nan(self):
+    def test_scraper_format_company_info_never_shows_nan(self) -> None:
         """Test that scraper _format_company_info never returns any form of 'nan'."""
         for invalid_value in self.invalid_values:
             test_rows = [
@@ -144,16 +150,16 @@ class TestNanPreventionSuite(unittest.TestCase):
                     self.assertNotIn("none", str(result).lower())
                     self.assertNotIn("null", str(result).lower())
 
-    def test_date_formatting_never_shows_nan(self):
+    def test_date_formatting_never_shows_nan(self) -> None:
         """Test that date formatting never returns any form of 'nan'."""
         for invalid_value in self.invalid_values:
             with self.subTest(value=invalid_value):
-                result = format_posted_date_enhanced(invalid_value)
+                result = format_posted_date_enhanced(str(invalid_value))
                 self.assertNotIn("nan", str(result).lower())
                 self.assertNotIn("none", str(result).lower())
                 self.assertNotIn("null", str(result).lower())
 
-    def test_end_to_end_job_processing(self):
+    def test_end_to_end_job_processing(self) -> None:
         """Test end-to-end job processing doesn't produce nan values."""
         # Create a job DataFrame with various invalid values
         jobs_data = pd.DataFrame(
@@ -206,13 +212,13 @@ class TestNanPreventionSuite(unittest.TestCase):
                     self.assertNotIn("none", str(value).lower(), f"Found 'none' in {column}: {value}")
                     self.assertNotIn("null", str(value).lower(), f"Found 'null' in {column}: {value}")
 
-    def test_dashboard_display_functions_consistency(self):
+    def test_dashboard_display_functions_consistency(self) -> None:
         """Test that all dashboard display functions handle the same invalid values consistently."""
         for invalid_value in self.invalid_values:
             # All these functions should handle invalid values gracefully
-            display_result = clean_display_value(invalid_value)
-            company_result = clean_company_info(invalid_value)
-            date_result = format_posted_date_enhanced(invalid_value)
+            display_result = clean_display_value(str(invalid_value))
+            company_result = clean_company_info(str(invalid_value))
+            date_result = format_posted_date_enhanced(str(invalid_value))
 
             # None should contain nan/none/null
             results = [display_result, company_result, date_result]
@@ -221,7 +227,7 @@ class TestNanPreventionSuite(unittest.TestCase):
                 self.assertNotIn("none", str(result).lower())
                 self.assertNotIn("null", str(result).lower())
 
-    def test_realistic_job_data_scenarios(self):
+    def test_realistic_job_data_scenarios(self) -> None:
         """Test with realistic job data that might contain nan values."""
         realistic_scenarios = [
             # Scenario 1: Indeed job with partial company data
@@ -250,11 +256,11 @@ class TestNanPreventionSuite(unittest.TestCase):
             with self.subTest(scenario=i):
                 # Apply display functions as they would be used in the dashboard
                 cleaned_data = {}
-                for field, value in scenario.items():
+                for field, value in scenario.items():  # type: ignore[attr-defined]
                     if field == "company_info":
-                        cleaned_data[field] = clean_company_info(value)
+                        cleaned_data[field] = clean_company_info(str(value))
                     else:
-                        cleaned_data[field] = clean_display_value(value)
+                        cleaned_data[field] = clean_display_value(str(value))
 
                 # Verify no nan values in cleaned data
                 for field, cleaned_value in cleaned_data.items():
@@ -272,11 +278,11 @@ class TestNanPreventionSuite(unittest.TestCase):
 class TestNanPreventionRegression(unittest.TestCase):
     """Regression tests for specific nan issues that were reported."""
 
-    def setUp(self):
+    def setUp(self) -> None:
         """Set up test fixtures."""
         self.scraper = get_indeed_scraper()
 
-    def test_company_info_nan_regression(self):
+    def test_company_info_nan_regression(self) -> None:
         """Regression test for the specific company info nan issue."""
         # This is the exact problem that was reported
         problematic_row = {"company_industry": "nan", "company_num_employees": "nan", "company_revenue": "nan"}
@@ -289,7 +295,7 @@ class TestNanPreventionRegression(unittest.TestCase):
         # Should be clean
         self.assertEqual(result, "N/A")
 
-    def test_dashboard_job_details_nan_regression(self):
+    def test_dashboard_job_details_nan_regression(self) -> None:
         """Regression test for nan values appearing in job details."""
         # Simulate the job data that would cause nan in job details
         job_data = {

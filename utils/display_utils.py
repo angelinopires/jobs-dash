@@ -2,12 +2,14 @@
 Display utility functions for cleaning and formatting job data.
 """
 
+from typing import Any
+
 import pandas as pd
 
 from utils.constants import INVALID_VALUES
 
 
-def clean_display_value(value, default="Not available"):
+def clean_display_value(value: str, default: str = "Not available") -> str:
     """
     Clean a value for display, handling nan, None, empty strings, etc.
 
@@ -33,13 +35,13 @@ def clean_display_value(value, default="Not available"):
         return default
 
     # Handle specific cases like "n.a.", "N.A.", etc.
-    if str_value.lower() in ["n.a.", "n/a", "na", "null", "none", "undefined"]:
+    if str_value.lower() in ["n.a.", "n/a", "na", "null", "none", "undefined", "<na>"]:
         return default
 
     return str_value
 
 
-def clean_company_info(company_info_str):
+def clean_company_info(company_info_str: str) -> str:
     """
     Clean company info string that may contain nan values.
 
@@ -80,7 +82,7 @@ def clean_company_info(company_info_str):
         return "Not available"
 
 
-def format_posted_date_enhanced(date_value):
+def format_posted_date_enhanced(date_value: Any) -> str:
     """
     Enhanced date formatting that handles various input formats and invalid values.
 
@@ -111,6 +113,14 @@ def format_posted_date_enhanced(date_value):
 
             # Try different parsing approaches
             try:
+                # Handle numeric timestamp strings (Unix timestamps)
+                if date_value.isdigit():
+                    timestamp = float(date_value)
+                    if timestamp > 1e10:  # Milliseconds
+                        timestamp = timestamp / 1000.0
+                    date_obj = dt.datetime.fromtimestamp(timestamp)
+                    return str(date_obj.strftime("%b %d, %Y"))  # Date only, no time
+
                 # Handle ISO format dates like "2025-08-23"
                 if "-" in date_value and len(date_value) == 10:
                     parsed_date = dt.datetime.strptime(date_value, "%Y-%m-%d")
@@ -118,7 +128,7 @@ def format_posted_date_enhanced(date_value):
 
                 # Handle other formats
                 parsed_date = pd.to_datetime(date_value)
-                return parsed_date.strftime("%b %d, %Y")  # Always date only, no time
+                return str(parsed_date.strftime("%b %d, %Y"))  # Always date only, no time
             except Exception:
                 # Check if the original value is invalid
                 if str(date_value).lower() in [v.lower() for v in INVALID_VALUES]:
@@ -127,15 +137,15 @@ def format_posted_date_enhanced(date_value):
 
         elif isinstance(date_value, (int, float)):
             # Handle timestamps
-            timestamp = int(date_value)
+            timestamp = float(date_value)
             if timestamp > 1e10:  # Milliseconds
-                timestamp = timestamp / 1000
+                timestamp = timestamp / 1000.0
             date_obj = dt.datetime.fromtimestamp(timestamp)
-            return date_obj.strftime("%b %d, %Y")  # Date only, no time
+            return str(date_obj.strftime("%b %d, %Y"))  # Date only, no time
 
         elif hasattr(date_value, "strftime"):
             # Already a datetime object
-            return date_value.strftime("%b %d, %Y")  # Date only, no time
+            return str(date_value.strftime("%b %d, %Y"))  # Date only, no time
 
         else:
             # Check if the original value is invalid

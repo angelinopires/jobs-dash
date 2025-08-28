@@ -17,7 +17,7 @@ from scrapers.base_scraper import BaseJobScraper, FilterCapabilities
 class TestFilterCapabilities(unittest.TestCase):
     """Test the FilterCapabilities helper class."""
 
-    def test_api_filters_defined(self):
+    def test_api_filters_defined(self) -> None:
         """Test that API filters are properly defined."""
         api_filters = FilterCapabilities.API_FILTERS
 
@@ -32,7 +32,7 @@ class TestFilterCapabilities(unittest.TestCase):
             self.assertIsInstance(description, str)
             self.assertTrue(len(description) > 0)
 
-    def test_post_processing_filters_defined(self):
+    def test_post_processing_filters_defined(self) -> None:
         """Test that post-processing filters are properly defined."""
         post_filters = FilterCapabilities.POST_PROCESSING_FILTERS
 
@@ -46,7 +46,7 @@ class TestFilterCapabilities(unittest.TestCase):
             self.assertIsInstance(description, str)
             self.assertTrue(len(description) > 0)
 
-    def test_filter_classification(self):
+    def test_filter_classification(self) -> None:
         """Test filter classification methods."""
         # API filters should be identified correctly
         self.assertTrue(FilterCapabilities.is_api_filter("search_term"))
@@ -58,7 +58,7 @@ class TestFilterCapabilities(unittest.TestCase):
         self.assertTrue(FilterCapabilities.is_post_processing_filter("company_size"))
         self.assertFalse(FilterCapabilities.is_post_processing_filter("search_term"))
 
-    def test_get_all_filters(self):
+    def test_get_all_filters(self) -> None:
         """Test getting all available filters."""
         all_filters = FilterCapabilities.get_all_filters()
 
@@ -75,10 +75,10 @@ class ConcreteTestScraper(BaseJobScraper):
     This is like creating a mock implementation that follows the interface.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
-        self.api_call_count = 0
-        self.mock_jobs_data = pd.DataFrame()
+        self.api_call_count: int = 0
+        self.mock_jobs_data: pd.DataFrame = pd.DataFrame()
 
     def get_supported_api_filters(self) -> Dict[str, bool]:
         """Test implementation supporting common filters."""
@@ -91,7 +91,7 @@ class ConcreteTestScraper(BaseJobScraper):
             "company_size": False,  # Not supported - needs post-processing
         }
 
-    def _build_api_search_params(self, **filters) -> Dict[str, Any]:
+    def _build_api_search_params(self, **filters: Any) -> Dict[str, Any]:
         """Test implementation that builds search params."""
         supported = self.get_supported_api_filters()
         params = {}
@@ -120,7 +120,7 @@ class ConcreteTestScraper(BaseJobScraper):
         # Return mock data or empty DataFrame
         return self.mock_jobs_data.copy() if not self.mock_jobs_data.empty else pd.DataFrame()
 
-    def set_mock_data(self, jobs_df: pd.DataFrame):
+    def set_mock_data(self, jobs_df: pd.DataFrame) -> None:
         """Helper to set mock data for testing."""
         self.mock_jobs_data = jobs_df
 
@@ -128,7 +128,7 @@ class ConcreteTestScraper(BaseJobScraper):
 class TestBaseJobScraper(unittest.TestCase):
     """Test the BaseJobScraper abstract class behavior."""
 
-    def setUp(self):
+    def setUp(self) -> None:
         """Set up test fixtures."""
         self.scraper = ConcreteTestScraper()
 
@@ -145,18 +145,18 @@ class TestBaseJobScraper(unittest.TestCase):
             }
         )
 
-    def test_abstract_class_cannot_be_instantiated(self):
+    def test_abstract_class_cannot_be_instantiated(self) -> None:
         """Test that BaseJobScraper cannot be instantiated directly."""
         with self.assertRaises(TypeError):
-            BaseJobScraper()
+            BaseJobScraper()  # type: ignore[abstract]
 
-    def test_concrete_scraper_can_be_instantiated(self):
+    def test_concrete_scraper_can_be_instantiated(self) -> None:
         """Test that concrete implementation can be instantiated."""
         scraper = ConcreteTestScraper()
         self.assertIsInstance(scraper, BaseJobScraper)
         self.assertIsInstance(scraper, ConcreteTestScraper)
 
-    def test_search_jobs_returns_required_fields(self):
+    def test_search_jobs_returns_required_fields(self) -> None:
         """Test that search_jobs always returns required fields."""
         # Test with empty results
         result = self.scraper.search_jobs(search_term="Python")
@@ -174,7 +174,7 @@ class TestBaseJobScraper(unittest.TestCase):
         self.assertIsInstance(result["message"], str)
         self.assertIsInstance(result["metadata"], dict)
 
-    def test_search_jobs_includes_timing(self):
+    def test_search_jobs_includes_timing(self) -> None:
         """Test that search_time is properly calculated."""
         start_time = time.time()
         result = self.scraper.search_jobs(search_term="Python")
@@ -184,7 +184,7 @@ class TestBaseJobScraper(unittest.TestCase):
         self.assertGreater(result["search_time"], 0)
         self.assertLess(result["search_time"], end_time - start_time + 0.1)  # Allow small margin
 
-    def test_search_jobs_with_mock_data(self):
+    def test_search_jobs_with_mock_data(self) -> None:
         """Test search_jobs with actual mock data."""
         self.scraper.set_mock_data(self.sample_jobs)
 
@@ -199,7 +199,7 @@ class TestBaseJobScraper(unittest.TestCase):
         # Should call API once
         self.assertEqual(self.scraper.api_call_count, 1)
 
-    def test_api_vs_post_processing_filter_separation(self):
+    def test_api_vs_post_processing_filter_separation(self) -> None:
         """Test that filters are properly separated between API and post-processing."""
         self.scraper.set_mock_data(self.sample_jobs)
 
@@ -224,7 +224,7 @@ class TestBaseJobScraper(unittest.TestCase):
         # Post-processing should include unsupported ones
         self.assertIn("salary_currency", post_filters)
 
-    def test_post_processing_salary_currency_filter(self):
+    def test_post_processing_salary_currency_filter(self) -> None:
         """Test salary currency post-processing filter."""
         # Create jobs with different currencies
         multi_currency_jobs = pd.DataFrame(
@@ -252,7 +252,7 @@ class TestBaseJobScraper(unittest.TestCase):
         self.assertEqual(len(currencies), 1)
         self.assertEqual(currencies[0], "USD")
 
-    def test_rate_limiting(self):
+    def test_rate_limiting(self) -> None:
         """Test that rate limiting is enforced."""
         # Set a shorter delay for testing
         self.scraper.min_delay = 0.1
@@ -276,12 +276,12 @@ class TestBaseJobScraper(unittest.TestCase):
         # (accounting for the delay enforcement)
         self.assertGreater(total_second_search_time, 0.05)  # At least some delay
 
-    def test_error_handling(self):
+    def test_error_handling(self) -> None:
         """Test error handling in search_jobs."""
 
         # Create a scraper that will raise an exception
         class FailingScraper(ConcreteTestScraper):
-            def _call_scraping_api(self, search_params):
+            def _call_scraping_api(self, search_params: Dict[str, Any]) -> pd.DataFrame:
                 raise Exception("API is down!")
 
         failing_scraper = FailingScraper()

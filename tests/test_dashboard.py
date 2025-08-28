@@ -26,7 +26,7 @@ sys.modules["streamlit"] = MagicMock()
 class TestDashboardFunctions(unittest.TestCase):
     """Test dashboard utility functions."""
 
-    def setUp(self):
+    def setUp(self) -> None:
         """Set up test fixtures."""
         # Sample job data for testing
         self.sample_jobs_df = pd.DataFrame(
@@ -54,7 +54,7 @@ class TestDashboardFunctions(unittest.TestCase):
             }
         )
 
-    def test_apply_display_formatting_valid_data(self):
+    def test_apply_display_formatting_valid_data(self) -> None:
         """Test display formatting with valid job data."""
         result = apply_display_formatting(self.sample_jobs_df)
 
@@ -69,7 +69,7 @@ class TestDashboardFunctions(unittest.TestCase):
         for col in expected_columns:
             self.assertIn(col, result.columns)
 
-    def test_apply_display_formatting_empty_dataframe(self):
+    def test_apply_display_formatting_empty_dataframe(self) -> None:
         """Test display formatting with empty DataFrame."""
         result = apply_display_formatting(self.empty_jobs_df)
 
@@ -78,7 +78,7 @@ class TestDashboardFunctions(unittest.TestCase):
         self.assertEqual(len(result), 0)
 
     @patch("dashboard.st")
-    def test_apply_interactive_filters_valid_data(self, mock_st):
+    def test_apply_interactive_filters_valid_data(self, mock_st: MagicMock) -> None:
         """Test interactive filtering with valid data."""
         # Mock the columns function to return 5 mock column objects
         mock_col1 = MagicMock()
@@ -103,7 +103,7 @@ class TestDashboardFunctions(unittest.TestCase):
         # Should have same number of rows initially (no filters applied)
         self.assertEqual(len(result), 3)
 
-    def test_filter_by_salary_range_valid_range(self):
+    def test_filter_by_salary_range_valid_range(self) -> None:
         """Test salary range filtering with valid range."""
         # Test with a reasonable salary range
         result = filter_by_salary_range(self.sample_jobs_df, "80000-120000")
@@ -114,7 +114,7 @@ class TestDashboardFunctions(unittest.TestCase):
         # Should filter jobs within range
         self.assertLessEqual(len(result), len(self.sample_jobs_df))
 
-    def test_filter_by_salary_range_invalid_range(self):
+    def test_filter_by_salary_range_invalid_range(self) -> None:
         """Test salary range filtering with invalid range."""
         # Test with invalid range format
         result = filter_by_salary_range(self.sample_jobs_df, "invalid-range")
@@ -122,7 +122,7 @@ class TestDashboardFunctions(unittest.TestCase):
         # Should handle invalid input gracefully
         self.assertIsInstance(result, pd.DataFrame)
 
-    def test_extract_salary_for_sorting_valid_salary(self):
+    def test_extract_salary_for_sorting_valid_salary(self) -> None:
         """Test salary extraction for sorting with valid salary strings."""
         test_cases = [
             ("$80,000 - $120,000", 100000),  # Range
@@ -137,7 +137,7 @@ class TestDashboardFunctions(unittest.TestCase):
                 self.assertIsInstance(result, (int, float))
                 self.assertGreaterEqual(result, 0)
 
-    def test_extract_salary_for_sorting_invalid_salary(self):
+    def test_extract_salary_for_sorting_invalid_salary(self) -> None:
         """Test salary extraction with invalid salary strings."""
         invalid_salaries = ["Not specified", "Competitive", "", None, "N/A"]
 

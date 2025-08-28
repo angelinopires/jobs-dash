@@ -12,7 +12,7 @@ import hashlib
 import json
 import os
 from datetime import datetime, timedelta
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, cast
 
 import pandas as pd
 import streamlit as st
@@ -30,7 +30,7 @@ class CacheManager:
     - Automatic cleanup of expired entries
     """
 
-    def __init__(self, cache_ttl_minutes: int = 15, cache_dir: str = "cache"):
+    def __init__(self, cache_ttl_minutes: float = 15.0, cache_dir: str = "cache") -> None:
         self.cache_ttl_minutes = cache_ttl_minutes
         self.cache_dir = cache_dir
         self.cache_file = os.path.join(cache_dir, "search_results.json")
@@ -44,7 +44,7 @@ class CacheManager:
         # Load file cache into session on first run
         self._load_file_cache_to_session()
 
-    def _init_session_cache(self):
+    def _init_session_cache(self) -> None:
         """Initialize session cache in a thread-safe way."""
         try:
             if "job_search_cache" not in st.session_state:
@@ -54,7 +54,7 @@ class CacheManager:
             pass
 
     def generate_cache_key(
-        self, scraper: str, search_term: str, country: str, include_remote: bool, **additional_params
+        self, scraper: str, search_term: str, country: str, include_remote: bool, **kwargs: Any
     ) -> str:
         """
         Generate a unique cache key based on search parameters.
@@ -64,7 +64,7 @@ class CacheManager:
             search_term: Job search keywords
             country: Target country or "Global"
             include_remote: Whether remote-only filter is enabled
-            **additional_params: Other search parameters
+            **kwargs: Other search parameters
 
         Returns:
             Unique cache key string
@@ -75,7 +75,7 @@ class CacheManager:
             "search_term": search_term.lower().strip(),
             "country": country.lower().strip(),
             "include_remote": include_remote,
-            **additional_params,
+            **kwargs,
         }
 
         # Convert to sorted JSON string for consistency
@@ -106,7 +106,7 @@ class CacheManager:
                     if "jobs_data" in cache_entry["result"]:
                         cache_entry["result"]["jobs"] = pd.DataFrame(cache_entry["result"]["jobs_data"])
 
-                    return cache_entry["result"]
+                    return cast(Dict[str, Any], cache_entry["result"])
                 else:
                     # Expired - remove from session cache
                     del st.session_state.job_search_cache[cache_key]
@@ -141,8 +141,6 @@ class CacheManager:
         # Fallback to file cache
         return self._get_cache_entry_info_from_file(cache_key)
 
-        return None
-
     def cache_result(self, cache_key: str, result: Dict[str, Any]) -> None:
         """
         Store search result in both session and file cache.
@@ -155,9 +153,10 @@ class CacheManager:
         cache_entry = {"timestamp": datetime.now().isoformat(), "result": result.copy()}
 
         # Convert DataFrame to serializable format for file cache
-        if "jobs" in cache_entry["result"] and isinstance(cache_entry["result"]["jobs"], pd.DataFrame):
+        result_dict = cast(Dict[str, Any], cache_entry["result"])
+        if "jobs" in result_dict and isinstance(result_dict["jobs"], pd.DataFrame):
             # Convert DataFrame to JSON-serializable format
-            jobs_df = cache_entry["result"]["jobs"]
+            jobs_df = result_dict["jobs"]
 
             # Convert datetime columns to strings to avoid JSON serialization issues
             jobs_data = jobs_df.copy()
@@ -165,9 +164,9 @@ class CacheManager:
                 if pd.api.types.is_datetime64_any_dtype(jobs_data[col]):
                     jobs_data[col] = jobs_data[col].astype(str)
 
-            cache_entry["result"]["jobs_data"] = jobs_data.to_dict("records")
+            result_dict["jobs_data"] = jobs_data.to_dict("records")
             # Keep DataFrame in session cache, remove for file cache
-            cache_entry["result"]["jobs"] = None
+            result_dict["jobs"] = None
 
         # Store in session cache (keeps DataFrame) - thread-safe
         try:
@@ -378,7 +377,7 @@ class CacheManager:
                     if "jobs_data" in cache_entry["result"]:
                         cache_entry["result"]["jobs"] = pd.DataFrame(cache_entry["result"]["jobs_data"])
 
-                    return cache_entry["result"]
+                    return cast(Dict[str, Any], cache_entry["result"])
         except Exception:
             pass
 

@@ -16,6 +16,7 @@ import warnings
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from queue import Queue
+from queue import Queue as QueueType
 from typing import Any, Callable, Dict, List, Optional
 
 import pandas as pd
@@ -62,7 +63,7 @@ class ThreadingManager:
     - Performance monitoring and logging
     """
 
-    def __init__(self, max_workers: int = 4, timeout_per_country: int = 30):
+    def __init__(self, max_workers: int = 4, timeout_per_country: int = 30) -> None:
         """
         Initialize the threading manager.
 
@@ -82,7 +83,7 @@ class ThreadingManager:
 
         # Thread safety
         self._lock = threading.Lock()
-        self._progress_queue = Queue()
+        self._progress_queue: QueueType = Queue()
 
     def search_countries_parallel(
         self,
@@ -326,6 +327,8 @@ class ThreadingManager:
         # Handle multiple DataFrames
         combined_jobs = []
         for result in valid_results:
+            # Type guard: result.jobs is guaranteed to be non-None here due to filtering above
+            assert result.jobs is not None
             df = result.jobs.copy()
             # Ensure consistent dtypes to avoid concat issues
             for col in df.columns:
@@ -400,7 +403,7 @@ class ThreadingManager:
             "timeout_per_country": self.timeout_per_country,
         }
 
-    def reset_stats(self):
+    def reset_stats(self) -> None:
         """Reset performance statistics."""
         with self._lock:
             self.total_searches = 0

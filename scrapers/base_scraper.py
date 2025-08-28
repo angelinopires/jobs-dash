@@ -24,8 +24,8 @@ class BaseJobScraper(ABC):
     Each scraper implementation specifies what filters it supports at API level.
     """
 
-    def __init__(self):
-        self.last_search_time = 0
+    def __init__(self) -> None:
+        self.last_search_time = 0.0
         self.min_delay = 1.0  # Minimum delay between searches
 
     # Abstract methods that each scraper must implement
@@ -49,7 +49,7 @@ class BaseJobScraper(ABC):
         pass
 
     @abstractmethod
-    def _build_api_search_params(self, **filters) -> Dict[str, Any]:
+    def _build_api_search_params(self, **filters: Any) -> Dict[str, Any]:
         """
         Build search parameters for the scraping API.
         Only includes filters supported at API level.
@@ -77,7 +77,7 @@ class BaseJobScraper(ABC):
 
     # Universal post-processing filter methods
 
-    def apply_post_processing_filters(self, jobs_df: pd.DataFrame, **filters) -> pd.DataFrame:
+    def apply_post_processing_filters(self, jobs_df: pd.DataFrame, **filters: Any) -> pd.DataFrame:
         """
         Apply filters that aren't supported at API level.
         These work across all scrapers universally.
@@ -245,7 +245,7 @@ class BaseJobScraper(ABC):
 
     # Core search method template
 
-    def search_jobs(self, **filters) -> Dict[str, Any]:
+    def search_jobs(self, **filters: Any) -> Dict[str, Any]:
         """
         Main search method that combines API and post-processing filters.
 
@@ -298,7 +298,7 @@ class BaseJobScraper(ABC):
                 "metadata": {"error": str(e)},
             }
 
-    def _get_post_processing_filters_used(self, **filters) -> List[str]:
+    def _get_post_processing_filters_used(self, **filters: Any) -> List[str]:
         """Get list of post-processing filters that were applied."""
         used_filters = []
         supported_api = self.get_supported_api_filters()
@@ -313,7 +313,7 @@ class BaseJobScraper(ABC):
 
     # Utility methods
 
-    def _enforce_rate_limit(self):
+    def _enforce_rate_limit(self) -> None:
         """Enforce minimum delay between searches."""
         current_time = time.time()
         time_since_last = current_time - self.last_search_time

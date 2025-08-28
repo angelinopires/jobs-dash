@@ -22,7 +22,7 @@ project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, project_root)
 
 
-def run_all_tests():
+def run_all_tests() -> bool:
     """Run all unit tests efficiently and return results."""
     print("🚀 Running all tests...")
 
@@ -62,7 +62,7 @@ def run_all_tests():
     return result.wasSuccessful()
 
 
-def run_specific_test(test_module):
+def run_specific_test(test_module: str) -> bool:
     """Run a specific test module."""
     print(f"🧪 Running specific test: {test_module}")
     loader = unittest.TestLoader()

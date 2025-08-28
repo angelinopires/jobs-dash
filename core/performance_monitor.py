@@ -26,10 +26,10 @@ class PerformanceMonitor:
     - Easy debugging and performance analysis
     """
 
-    def __init__(self, scraper_name: str):
+    def __init__(self, scraper_name: str) -> None:
         self.scraper_name = scraper_name
-        self.current_search = None
-        self.search_history = []
+        self.current_search: Optional[Any] = None
+        self.search_history: List[Dict[str, Any]] = []
         self.max_history = 100  # Keep last 100 searches in memory
 
         # Setup logging
@@ -57,7 +57,7 @@ class PerformanceMonitor:
         self.logger.info(f"🚀 STARTING SEARCH | {remote_indicator} '{search_display}' → {where}")
         self.logger.info(f"{separator}")
 
-    def end_search(self, success: bool, total_time: float, job_count: int, error_msg: str = None) -> None:
+    def end_search(self, success: bool, total_time: float, job_count: int, error_msg: Optional[str] = None) -> None:
         """End current search and record final metrics."""
         if not self.current_search:
             return
@@ -141,7 +141,7 @@ class PerformanceMonitor:
             # Default formatting
             self.logger.info(f"📝 {event_type}: {message}")
 
-    def log_api_call(self, site: str, search_term: str, url: str, response_time: float = None) -> None:
+    def log_api_call(self, site: str, search_term: str, url: str, response_time: Optional[float] = None) -> None:
         """
         Log API call with specific focus on search term, site, and URL.
 
@@ -157,7 +157,9 @@ class PerformanceMonitor:
 
         self.log("API call", message, url)
 
-    def log_cache_event(self, event_type: str, cache_key: str, country: str = None, cache_entry: dict = None) -> None:
+    def log_cache_event(
+        self, event_type: str, cache_key: str, country: Optional[str] = None, cache_entry: Optional[dict] = None
+    ) -> None:
         """
         Log cache-related events.
 
@@ -220,7 +222,9 @@ class PerformanceMonitor:
         except Exception:
             return ""
 
-    def log_optimization(self, optimization_type: str, improvement: str, metrics: Dict[str, Any] = None) -> None:
+    def log_optimization(
+        self, optimization_type: str, improvement: str, metrics: Optional[Dict[str, Any]] = None
+    ) -> None:
         """
         Log optimization events and improvements.
 

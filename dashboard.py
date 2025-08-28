@@ -3,6 +3,8 @@ Enhanced Job Dashboard - Indeed Focused
 A comprehensive job search dashboard with enhanced Indeed scraper support.
 """
 
+from typing import Any, Optional
+
 import pandas as pd
 import streamlit as st
 
@@ -30,7 +32,7 @@ if "indeed_scraper" not in st.session_state:
     st.session_state.indeed_scraper = get_indeed_scraper()
 
 
-def main():
+def main() -> None:
     """Main dashboard function."""
 
     # Header
@@ -57,7 +59,7 @@ def main():
         show_welcome_message()
 
 
-def create_search_sidebar():
+def create_search_sidebar() -> None:
     """Create search sidebar."""
     st.header("🌍 Jobs Dash")
 
@@ -131,7 +133,9 @@ def create_search_sidebar():
         )
 
 
-def perform_remote_job_search(search_term, where, include_remote, time_filter, platforms):
+def perform_remote_job_search(
+    search_term: str, where: str, include_remote: bool, time_filter: str, platforms: list
+) -> None:
     """Perform the job search with enhanced error handling."""
 
     # Validate inputs
@@ -143,7 +147,7 @@ def perform_remote_job_search(search_term, where, include_remote, time_filter, p
     progress_bar = st.progress(0)
     status_text = st.empty()
 
-    def update_progress(message, progress=None):
+    def update_progress(message: str, progress: Optional[Any] = None) -> None:
         if progress is not None:
             # Ensure progress is between 0 and 1
             progress_val = max(0.0, min(1.0, float(progress)))
@@ -213,7 +217,7 @@ def perform_remote_job_search(search_term, where, include_remote, time_filter, p
         status_text.empty()
 
 
-def display_toast_notifications():
+def display_toast_notifications() -> None:
     """Display toast notifications below the button."""
     from utils.toast import display_toasts
 
@@ -302,7 +306,7 @@ def apply_display_formatting(jobs_df: pd.DataFrame) -> pd.DataFrame:
     return formatted_df
 
 
-def _extract_salary_for_sorting(salary_str):
+def _extract_salary_for_sorting(salary_str: Any) -> float:
     """
     Extract numeric value from salary string for sorting purposes.
 
@@ -481,7 +485,7 @@ def apply_interactive_filters(jobs_df: pd.DataFrame) -> pd.DataFrame:
     return filtered_df
 
 
-def display_search_results():
+def display_search_results() -> None:
     """Display the search results with enhanced formatting and interactive filters."""
     jobs_df = st.session_state.jobs_df
 
@@ -642,7 +646,7 @@ def display_search_results():
                     st.info("No detailed description available for this job posting.")
 
 
-def show_welcome_message():
+def show_welcome_message() -> None:
     """Show welcome message and instructions."""
     st.info(
         "💡 Welcome! Use the sidebar to configure your job search parameters and click 'Start Indeed Search' to begin."
