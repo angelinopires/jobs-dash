@@ -30,20 +30,17 @@ if "search_metadata" not in st.session_state:
     st.session_state.search_metadata = None
 if "indeed_scraper" not in st.session_state:
     st.session_state.indeed_scraper = get_indeed_scraper()
+if "is_searching" not in st.session_state:
+    st.session_state.is_searching = False
 
 
 def main() -> None:
     """Main dashboard function."""
 
     # Header
-    st.title("🌍 Jobs Dash")
-    st.markdown(
-        """
-    **Remote-First Job Hunter** - Find the best remote opportunities across global markets.
-
-    Search for remote jobs worldwide or target specific countries. Optimized for distributed teams and remote work.
-    """
-    )
+    st.title("JobsDash: Your Open-Source Job Search Engine.")
+    st.markdown("Scrape hundreds of job boards in seconds. No ads, no tracking, completely free.")
+    st.divider()
 
     # Sidebar
     with st.sidebar:
@@ -80,7 +77,7 @@ def create_search_sidebar() -> None:
     # Available platforms
     platforms = st.pills(
         "Plaforms",
-        ["Indeed", "Glassdoor", "LinkedIn", "ZipRecruiter"],
+        ["Indeed"],
         default=["Indeed"],
         selection_mode="multi",
     )
@@ -91,7 +88,7 @@ def create_search_sidebar() -> None:
     # Where
     country_options = get_country_options()
     selected_where = st.selectbox(
-        "Where",
+        "Location Strategy",
         options=country_options,
         index=0,  # "Global" is first
         help="Search globally across top remote-friendly countries or target a specific country",
@@ -104,26 +101,41 @@ def create_search_sidebar() -> None:
     # Time filter
     time_options = get_time_filter_options()
     time_filter = st.selectbox(
-        "Job Posting Age",
+        "Posted Within",
         options=time_options,
         index=0,  # Default to "Last 24h"
-        help="Filter jobs by posting age",
+        help="Shows jobs based on their original posting date, ignoring minor updates or reposts",
     )
 
-    st.info(
-        "**Date Filter:** Filters jobs by when they were originally posted. "
-        "Jobs may have been refreshed/reposted recently but show older creation dates."
-    )
+    # Determine if button should be disabled
+    search_term_empty = not search_term.strip()
+    no_platforms_selected = not platforms
+    is_loading = st.session_state.is_searching
+
+    button_disabled = search_term_empty or no_platforms_selected or is_loading
+
+    # Show validation messages
+    if search_term_empty:
+        st.error("⚠️ Please enter a search term")
+    if no_platforms_selected:
+        st.error("⚠️ Please select at least one platform")
 
     # Search button
     search_clicked = st.button(
         ":material/travel_explore: Search Jobs",
         type="primary",
         use_container_width=True,
+        disabled=button_disabled,
     )
 
     # Handle search
-    if search_clicked:
+    if search_clicked and not button_disabled:
+        # Set loading state and rerun to update UI
+        st.session_state.is_searching = True
+        st.rerun()
+
+    # If we're in loading state, perform the search
+    if st.session_state.is_searching and not search_clicked:
         perform_remote_job_search(
             search_term=search_term,
             where=selected_where,
@@ -141,6 +153,7 @@ def perform_remote_job_search(
     # Validate inputs
     if not search_term.strip():
         error_toast("Please enter a search term")
+        st.session_state.is_searching = False
         return
 
     # Show progress
@@ -215,6 +228,9 @@ def perform_remote_job_search(
         # Clean up progress indicators
         progress_bar.empty()
         status_text.empty()
+        # Reset loading state and refresh UI
+        st.session_state.is_searching = False
+        st.rerun()
 
 
 def display_toast_notifications() -> None:
@@ -498,8 +514,6 @@ def display_search_results() -> None:
         metadata = st.session_state.search_metadata
         search_meta = metadata.get("metadata", {})
 
-        st.divider()
-
     # Apply formatting and sorting improvements first
     formatted_jobs_df = apply_display_formatting(jobs_df)
 
@@ -648,39 +662,61 @@ def display_search_results() -> None:
 
 def show_welcome_message() -> None:
     """Show welcome message and instructions."""
-    st.info(
-        "💡 Welcome! Use the sidebar to configure your job search parameters and click 'Start Indeed Search' to begin."
+    st.subheader("Welcome to Your New Job Search Command Center")
+    st.write(
+        "Ready to find your next remote role? Configure your search in the sidebar " "and click 'Search Jobs' to begin."
     )
 
-    # Show scraper information
-    with st.expander("ℹ️ About This Dashboard", expanded=False):
+    with st.expander("✨ Learn more about Jobs Dash & its features", expanded=True):
+        col1, col2 = st.columns(2)
+
         st.markdown(
             """
-        **Enhanced Indeed Job Scraper**
-
-        This dashboard provides enhanced Indeed scraping with:
-        - **60+ Country Support**: Search jobs worldwide
-        - **Advanced Filtering**: Remote work, posting age, location radius
-        - **Proxy Support**: Rotate IPs to avoid rate limiting
-        - **Better Error Handling**: Clear messages and progress tracking
-        - **Search History**: Save and reuse search parameters
-
-        **Supported Parameters:**
-        - Search term and location
-        - Country selection with Indeed code mapping
-        - Distance radius (5-100 miles)
-        - Remote work filtering
-        - Time-based filtering (24h, 72h, 1 week, no filter)
-        - Results count (5-100 jobs)
-        - Proxy rotation
-
-        **Limitations:**
-        - Maximum 1000 jobs per search
-        - Rate limiting may apply without proxies
-        - Time filters are based on original post date (not refresh/update date)
-        - Job type filtering is done via post-processing for better accuracy
-        """
+            Jobs Dash is an open-source tool built to cut through the noise of the modern job search.
+            Here's what makes it different:
+            """
         )
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown(
+                """
+                **✅ Global & Powerful Search**
+
+                Scan jobs from major platforms across **60+ countries**. Fine-tune with
+                advanced filters like posting age, location, and remote work options.
+                """
+            )
+            st.markdown(
+                """
+                **🔒 Completely Free & Private**
+
+                This tool is 100% free, open-source, and doesn't use trackers.
+                Your search is your own. Period.
+                """
+            )
+
+        with col2:
+            st.markdown(
+                """
+                **🚀 Built for Efficiency**
+
+                An intelligent proxy system avoids rate limits while clear error handling
+                and progress tracking keep you informed. Your time is valuable.
+                """
+            )
+            st.markdown(
+                """
+                **💾 Save & Reuse Searches**
+
+                Tweak your parameters and re-run searches instantly. Find the perfect query
+                and save it for your next session.
+                """
+            )
+
+        st.divider()
+        st.markdown("**Enjoying Jobs Dash? Give us a star on " "[GitHub](https://github.com/your-repo-link-here)!** ⭐")
 
 
 def filter_by_salary_range(jobs_df: pd.DataFrame, salary_range: str) -> pd.DataFrame:
