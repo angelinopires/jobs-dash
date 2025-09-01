@@ -304,6 +304,15 @@ class RedisManager:
             "max_connections": self.max_connections,
         }
 
+    def get_client(self) -> Optional[redis.Redis]:
+        """
+        Get the Redis client instance
+
+        Returns:
+            Optional[redis.Redis]: Redis client if healthy, None otherwise
+        """
+        return self._redis_client if self._is_healthy else None
+
     def close(self) -> None:
         """Close Redis connection"""
         if self._redis_client:

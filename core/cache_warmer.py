@@ -1,5 +1,5 @@
 """
-Production-Ready Cache Warmer
+Cache Warmer
 
 This module provides a cache warming system that integrates
 with actual job scrapers to fetch and cache real data for popular searches.
@@ -334,15 +334,10 @@ class CacheWarmer:
 
     def start_periodic_warming(self, interval_hours: int = 6) -> None:
         """
-        Start periodic cache warming (call this during application startup)
+        Start periodic cache warming
 
         This method should be called when the application starts to ensure
         cache warming runs automatically in the background.
-
-        Usage:
-            # In your main application startup
-            cache_warmer = get_cache_warmer()
-            cache_warmer.start_periodic_warming(interval_hours=6)
 
         Args:
             interval_hours: Hours between warming cycles (default: 6 hours)
@@ -370,15 +365,6 @@ def get_cache_warmer() -> CacheWarmer:
 def start_cache_warming_service(interval_hours: int = 6) -> CacheWarmer:
     """
     Start the cache warming service
-
-    Usage:
-        # In your main application startup (e.g., dashboard.py)
-        from core.cache_warmer import start_cache_warming_service
-
-        # Start cache warming service
-        cache_warmer = start_cache_warming_service(interval_hours=6)
-
-        # Your application continues...
 
     Args:
         interval_hours: Hours between warming cycles (default: 6 hours)

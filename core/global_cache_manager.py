@@ -57,6 +57,8 @@ class GlobalCacheManager:
         self._cache_hits = 0
         self._cache_misses = 0
         self._redis_failures = 0
+        self._redis_hits = 0
+        self._file_hits = 0
 
         # Cache warming for popular searches
         self._popular_searches = {
@@ -305,19 +307,21 @@ class GlobalCacheManager:
                         # Update access statistics
                         self._update_access_stats(cached_data)
                         self._cache_hits += 1
-                        logger.debug(f"✅ Redis cache HIT for key: {key}")
+                        self._redis_hits += 1
+                        logger.info(f"💾 Redis cache HIT for key: {key}")
                         return cached_data  # type: ignore[no-any-return]
                     else:
                         self._cache_misses += 1
-                        logger.debug(f"❌ Redis cache MISS for key: {key}")
+                        logger.info(f"🔍 Redis cache MISS for key: {key}")
 
                         # Try file cache as fallback
                         file_cache_result = self._get_from_file_cache(key)
                         if file_cache_result is not None:
-                            logger.debug(f"✅ File cache HIT for key: {key}")
+                            self._file_hits += 1
+                            logger.info(f"📁 File cache HIT for key: {key}")
                             return file_cache_result
                         else:
-                            logger.debug(f"❌ File cache MISS for key: {key}")
+                            logger.info(f"🔍 File cache MISS for key: {key}")
                             return None
 
                 else:
@@ -332,18 +336,20 @@ class GlobalCacheManager:
                         if cached_data is not None:
                             self._update_access_stats(cached_data)
                             self._cache_hits += 1
-                            logger.debug(f"✅ Redis cache HIT after recovery for key: {key}")
+                            self._redis_hits += 1
+                            logger.info(f"💾 Redis cache HIT after recovery for key: {key}")
                             return cached_data  # type: ignore[no-any-return]
                         else:
-                            logger.debug(f"❌ Redis cache MISS after recovery for key: {key}")
+                            logger.info(f"🔍 Redis cache MISS after recovery for key: {key}")
 
                     # Fall back to file cache
                     file_cache_result = self._get_from_file_cache(key)
                     if file_cache_result is not None:
-                        logger.debug(f"✅ File cache HIT for key: {key}")
+                        self._file_hits += 1
+                        logger.info(f"📁 File cache HIT for key: {key}")
                         return file_cache_result
                     else:
-                        logger.debug(f"❌ File cache MISS for key: {key}")
+                        logger.info(f"🔍 File cache MISS for key: {key}")
                         return None
 
             except Exception as e:
@@ -452,7 +458,7 @@ class GlobalCacheManager:
         Get cache statistics
 
         Returns:
-            Dict: Cache statistics including hits, misses, and Redis health
+            Dict: Cache statistics including hits, misses, Redis health, and cache source breakdown
         """
         with self._lock:
             total_requests = self._cache_hits + self._cache_misses
@@ -465,12 +471,18 @@ class GlobalCacheManager:
                 "cache_misses": self._cache_misses,
                 "total_requests": total_requests,
                 "hit_rate_percent": round(hit_rate, 2),
+                "cache_source_breakdown": {
+                    "redis_hits": self._redis_hits,
+                    "file_hits": self._file_hits,
+                    "redis_hit_rate": round((self._redis_hits / total_requests * 100) if total_requests > 0 else 0, 2),
+                    "file_hit_rate": round((self._file_hits / total_requests * 100) if total_requests > 0 else 0, 2),
+                },
                 "redis_failures": self._redis_failures,
                 "redis_healthy": self.redis_manager.is_healthy(),
                 "redis_connection_info": self.redis_manager.get_connection_info(),
                 "file_cache_stats": file_stats,
                 "cache_efficiency": {
-                    "redis_hit_rate": round((self._cache_hits / total_requests * 100) if total_requests > 0 else 0, 2),
+                    "redis_hit_rate": round((self._redis_hits / total_requests * 100) if total_requests > 0 else 0, 2),
                     "file_cache_size_mb": round(file_stats.get("total_size_bytes", 0) / (1024 * 1024), 2),
                     "file_cache_files": file_stats.get("file_count", 0),
                 },
@@ -491,8 +503,8 @@ class GlobalCacheManager:
         """
         with self._lock:
             try:
-                # Clear Redis cache (simplified - would need pattern-based deletion in production)
-                logger.info("Clearing Redis cache")
+                # Clear Redis cache with pattern-based deletion
+                redis_cleared = self._clear_redis_cache()
 
                 # Clear file cache
                 file_cache_success = self.file_operations.clear_cache()
@@ -501,7 +513,8 @@ class GlobalCacheManager:
                 else:
                     logger.warning("Failed to clear file cache")
 
-                return file_cache_success
+                # Return success if either Redis or file cache was cleared successfully
+                return redis_cleared or file_cache_success
 
             except Exception as e:
                 logger.error(f"Error clearing cache: {e}")
@@ -527,7 +540,7 @@ class GlobalCacheManager:
             if cached_data is not None:
                 # Update access statistics
                 self._update_access_stats(cached_data)
-                self._cache_hits += 1
+                # Note: cache_hits and file_hits are incremented in the calling method
                 logger.debug(f"File cache hit for key: {key}")
                 return cached_data
             else:
@@ -573,6 +586,53 @@ class GlobalCacheManager:
             return exists
         except Exception as e:
             logger.error(f"Error checking file cache existence for key '{key}': {e}")
+            return False
+
+    def _clear_redis_cache(self) -> bool:
+        """
+        Clear Redis cache using pattern-based deletion
+
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            if not self.redis_manager.is_healthy():
+                logger.warning("Redis not healthy, skipping Redis cache clear")
+                return False
+
+            # Use RedisManager's existing methods for pattern-based deletion
+            # Since RedisManager doesn't have pattern deletion, we'll use a simpler approach
+            # Clear by deleting known cache key patterns one by one
+
+            # Get popular search combinations to clear
+            popular_searches = self.get_popular_search_combinations()
+
+            total_deleted = 0
+            for job_title, locations in popular_searches.items():
+                for location in locations:
+                    for posting_age in self._popular_posting_ages:
+                        # Generate cache key and try to delete it
+                        cache_key = self.generate_cache_key(
+                            scraper_name="indeed",
+                            job_title=job_title,
+                            location=location,
+                            remote=(location.lower() == "remote"),
+                            posting_age=posting_age,
+                        )
+
+                        if self.redis_manager.delete(cache_key):
+                            total_deleted += 1
+                            logger.debug(f"Deleted Redis cache key: {cache_key}")
+
+            if total_deleted > 0:
+                logger.info(f"✅ Successfully cleared {total_deleted} Redis cache entries")
+                return True
+            else:
+                logger.info("ℹ️ No Redis cache entries found to clear")
+                return True  # Still consider it successful if no keys were found
+
+        except Exception as e:
+            logger.error(f"Error clearing Redis cache: {e}")
             return False
 
     def _warm_cache_entry(

@@ -102,6 +102,29 @@ class ThreadingConfig:
             raise ValueError("Timeout per country must be at least 1 second")
 
 
+@dataclass
+class CacheWarmingConfig:
+    """
+    Cache Warming Configuration
+
+    This dataclass holds all cache warming settings.
+    """
+
+    interval_hours: int
+    max_results_per_search: int
+
+    def __post_init__(self) -> None:
+        """Validate configuration after initialization"""
+        if self.interval_hours < 1:
+            raise ValueError("Cache warming interval must be at least 1 hour")
+        if self.interval_hours > 168:  # 1 week max
+            raise ValueError("Cache warming interval cannot exceed 168 hours (1 week)")
+        if self.max_results_per_search < 1:
+            raise ValueError("Max results per search must be at least 1")
+        if self.max_results_per_search > 100:
+            raise ValueError("Max results per search cannot exceed 100")
+
+
 class EnvironmentManager:
     """
     Environment Variable Manager
@@ -116,6 +139,7 @@ class EnvironmentManager:
         self._rate_limit_config: Optional[RateLimitConfig] = None
         self._redis_config: Optional[RedisConfig] = None
         self._threading_config: Optional[ThreadingConfig] = None
+        self._cache_warming_config: Optional[CacheWarmingConfig] = None
         self._load_configurations()
 
     def _load_configurations(self) -> None:
@@ -128,6 +152,7 @@ class EnvironmentManager:
             self._rate_limit_config = self._load_rate_limit_config()
             self._redis_config = self._load_redis_config()
             self._threading_config = self._load_threading_config()
+            self._cache_warming_config = self._load_cache_warming_config()
 
             logger.info("Environment configurations loaded successfully")
 
@@ -218,6 +243,24 @@ class EnvironmentManager:
         logger.debug(f"Threading config - max_workers: {max_workers}, timeout_per_country: {timeout_per_country}s")
 
         return ThreadingConfig(max_workers=max_workers, timeout_per_country=timeout_per_country)
+
+    def _load_cache_warming_config(self) -> CacheWarmingConfig:
+        """
+        Load cache warming configuration from environment variables
+
+        Returns:
+            CacheWarmingConfig: Validated configuration object
+        """
+        # Get environment variables with fallback defaults
+        interval_hours = self._get_env_int("CACHE_WARMING_INTERVAL_HOURS", default=6)
+        max_results_per_search = self._get_env_int("CACHE_WARMING_MAX_RESULTS_PER_SEARCH", default=50)
+
+        logger.debug(
+            f"Cache warming config - interval_hours: {interval_hours}, "
+            f"max_results_per_search: {max_results_per_search}"
+        )
+
+        return CacheWarmingConfig(interval_hours=interval_hours, max_results_per_search=max_results_per_search)
 
     def _get_env_float(self, key: str, default: float) -> float:
         """
@@ -334,6 +377,19 @@ class EnvironmentManager:
             self._threading_config = ThreadingConfig(max_workers=4, timeout_per_country=30)
         return self._threading_config
 
+    @property
+    def cache_warming(self) -> CacheWarmingConfig:
+        """
+        Get cache warming configuration
+
+        Returns:
+            CacheWarmingConfig: Current cache warming settings
+        """
+        if self._cache_warming_config is None:
+            # Fallback to defaults if not loaded
+            self._cache_warming_config = CacheWarmingConfig(interval_hours=6, max_results_per_search=50)
+        return self._cache_warming_config
+
 
 # Default configuration values
 REDIS_DEFAULTS: dict[str, Any] = {
@@ -401,3 +457,13 @@ def get_threading_config() -> ThreadingConfig:
         ThreadingConfig: Current threading settings
     """
     return get_environment_manager().threading
+
+
+def get_cache_warming_config() -> CacheWarmingConfig:
+    """
+    Convenience function to get cache warming configuration
+
+    Returns:
+        CacheWarmingConfig: Current cache warming settings
+    """
+    return get_environment_manager().cache_warming
