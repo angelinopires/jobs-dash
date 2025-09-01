@@ -32,19 +32,8 @@ if "indeed_scraper" not in st.session_state:
     st.session_state.indeed_scraper = get_indeed_scraper()
 if "is_searching" not in st.session_state:
     st.session_state.is_searching = False
-if "cache_warmer" not in st.session_state:
-    try:
-        from config.environment import get_cache_warming_config
-        from core.cache_warmer import start_cache_warming_service
-
-        # Get cache warming configuration from environment variables
-        cache_config = get_cache_warming_config()
-        st.session_state.cache_warmer = start_cache_warming_service(interval_hours=cache_config.interval_hours)
-        st.session_state.cache_warmer_initialized = True
-    except Exception as e:
-        st.session_state.cache_warmer = None
-        st.session_state.cache_warmer_initialized = False
-        print(f"Cache warming service initialization failed: {e}")
+if "cache_warmer_initialized" not in st.session_state:
+    st.session_state.cache_warmer_initialized = False
 
 
 def main() -> None:

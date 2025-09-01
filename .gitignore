@@ -64,3 +64,6 @@ cache/
 # Environment variables
 .env
 .env.local
+
+# Analytics
+analytics/

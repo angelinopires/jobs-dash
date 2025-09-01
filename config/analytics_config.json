@@ -1,0 +1,32 @@
+{
+  "analytics": {
+    "enabled": true,
+    "storage": {
+      "base_path": "analytics",
+      "daily_folder": "daily",
+      "weekly_folder": "weekly",
+      "monthly_folder": "monthly",
+      "max_daily_files": 30,
+      "max_weekly_files": 12,
+      "max_monthly_files": 12
+    },
+    "compression": {
+      "enabled": true,
+      "algorithm": "gzip",
+      "compression_level": 6
+    },
+    "processing": {
+      "weekly_cleanup_day": "sunday",
+      "weekly_cleanup_hour": 2,
+      "cache_cleanup_enabled": true,
+      "max_cache_size_mb": 50,
+      "cache_ttl_hours": 168
+    },
+    "tracking": {
+      "session_tracking": false,
+      "user_identification": false,
+      "search_metadata": true,
+      "performance_metrics": true
+    }
+  }
+}
