@@ -10,6 +10,7 @@ import streamlit as st
 
 from config.countries import get_country_options
 from config.remote_filters import enhance_search_term_with_remote_keywords, get_global_countries_display
+from core.cache_warming_manager import CacheWarmingManager
 from scrapers.optimized_indeed_scraper import get_indeed_scraper
 from utils.display_utils import clean_company_info, clean_display_value, format_posted_date_enhanced
 from utils.time_filters import get_time_filter_options
@@ -38,6 +39,18 @@ if "cache_warmer_initialized" not in st.session_state:
 
 def main() -> None:
     """Main dashboard function."""
+
+    # Cache warming on first visit (runs only once per session)
+    if not st.session_state.cache_warmer_initialized:
+        st.session_state.cache_warmer_initialized = True
+
+        # Start cache warming in background
+        try:
+            cache_manager = CacheWarmingManager()
+            # Run initial cache warming with popular searches
+            cache_manager.warm_cache()
+        except Exception:
+            pass
 
     # Header
     st.title("JobsDash: Your Open-Source Job Search Engine.")
