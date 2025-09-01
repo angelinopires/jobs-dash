@@ -2,6 +2,7 @@
 streamlit>=1.28.0
 pandas>=2.0.0
 python-jobspy>=1.1.79
+redis>=5.0.0
 
 # Development dependencies
 black>=23.12.0          # Code formatter

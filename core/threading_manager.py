@@ -21,6 +21,8 @@ from typing import Any, Callable, Dict, List, Optional
 
 import pandas as pd
 
+from config.environment import get_threading_config
+
 # Suppress Streamlit threading warnings - they're expected and harmless
 warnings.filterwarnings("ignore", category=UserWarning, module="streamlit")
 warnings.filterwarnings("ignore", message=".*missing ScriptRunContext.*")
@@ -63,16 +65,23 @@ class ThreadingManager:
     - Performance monitoring and logging
     """
 
-    def __init__(self, max_workers: int = 4, timeout_per_country: int = 30) -> None:
+    def __init__(self, max_workers: Optional[int] = None, timeout_per_country: Optional[int] = None) -> None:
         """
         Initialize the threading manager.
 
         Args:
             max_workers: Maximum number of concurrent threads
+                        (defaults to THREADING_MAX_WORKERS env var)
             timeout_per_country: Timeout in seconds for each country search
+                                (defaults to THREADING_TIMEOUT_PER_COUNTRY env var)
         """
-        self.max_workers = max_workers
-        self.timeout_per_country = timeout_per_country
+        # Get configuration from environment variables with fallback to parameters
+        threading_config = get_threading_config()
+
+        self.max_workers = max_workers if max_workers is not None else threading_config.max_workers
+        self.timeout_per_country = (
+            timeout_per_country if timeout_per_country is not None else threading_config.timeout_per_country
+        )
         self.logger = logging.getLogger("threading.manager")
 
         # Performance tracking

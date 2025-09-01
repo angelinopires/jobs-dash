@@ -42,10 +42,10 @@ class BaseOptimizer(ABC):
         self, countries: List[str], search_function: Callable, max_workers: int = 4
     ) -> Dict[str, Any]:
         """
-        Prepare search operations for future parallel execution.
+        Prepare search operations for parallel execution.
 
         This method sets up the framework for parallel processing
-        without actually implementing it yet (Phase 2 feature).
+        across multiple countries (Phase 3 implementation).
 
         Args:
             countries: List of countries to search
@@ -55,15 +55,13 @@ class BaseOptimizer(ABC):
         Returns:
             Configuration dict for parallel execution
         """
-        # For now, return configuration for sequential execution
-        # This will be enhanced in Phase 2 with actual parallel processing
 
         return {
-            "execution_mode": "sequential",  # Will become "parallel" in Phase 2
+            "execution_mode": "parallel",
             "countries": countries,
             "search_function": search_function,
             "max_workers": min(max_workers, len(countries)),
-            "batch_size": 1,  # Process one at a time for now
+            "batch_size": max(1, len(countries) // max_workers),
             "optimization_ready": True,
         }
 

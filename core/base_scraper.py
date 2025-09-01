@@ -33,7 +33,7 @@ class BaseScraper(ABC):
         self.scraper_name = scraper_name
         self.performance_monitor = PerformanceMonitor(scraper_name)
         self.cache_manager = CacheManager()
-        self.threading_manager = ThreadingManager(max_workers=4)  # Phase 2: Parallel processing
+        self.threading_manager = ThreadingManager()
         self.last_search_time = 0.0
         self.min_delay = 1.0  # Minimum delay between API calls
 

@@ -8,7 +8,7 @@ It provides fallback defaults and type validation for all configuration options.
 import logging
 import os
 from dataclasses import dataclass
-from typing import Optional
+from typing import Any, Optional
 
 # Set up logging for configuration loading
 logger = logging.getLogger(__name__)
@@ -20,7 +20,6 @@ class CircuitBreakerConfig:
     Circuit Breaker Configuration
 
     This dataclass holds all circuit breaker settings.
-    Think of it like a TypeScript interface or React props object.
     """
 
     threshold: int
@@ -40,7 +39,6 @@ class RateLimitConfig:
     Rate Limiter Configuration
 
     This dataclass holds all rate limiting settings.
-    Think of it like a TypeScript interface for rate limiting props.
     """
 
     base_delay: float
@@ -52,6 +50,56 @@ class RateLimitConfig:
             raise ValueError("Base delay must be non-negative")
         if self.max_delay < self.base_delay:
             raise ValueError("Max delay must be greater than base delay")
+
+
+@dataclass
+class RedisConfig:
+    """
+    Redis Configuration
+
+    This dataclass holds all Redis connection settings.
+    """
+
+    url: str
+    ttl: int
+    max_connections: int
+    retry_attempts: int
+    retry_delay: float
+    health_check_interval: int
+
+    def __post_init__(self) -> None:
+        """Validate configuration after initialization"""
+        if self.ttl < 1:
+            raise ValueError("Redis TTL must be at least 1 second")
+        if self.max_connections < 1:
+            raise ValueError("Max connections must be at least 1")
+        if self.retry_attempts < 1:
+            raise ValueError("Retry attempts must be at least 1")
+        if self.retry_delay < 0:
+            raise ValueError("Retry delay must be non-negative")
+        if self.health_check_interval < 1:
+            raise ValueError("Health check interval must be at least 1 second")
+
+
+@dataclass
+class ThreadingConfig:
+    """
+    Threading Configuration
+
+    This dataclass holds all threading and parallel processing settings.
+    """
+
+    max_workers: int
+    timeout_per_country: int
+
+    def __post_init__(self) -> None:
+        """Validate configuration after initialization"""
+        if self.max_workers < 1:
+            raise ValueError("Max workers must be at least 1")
+        if self.max_workers > 20:
+            raise ValueError("Max workers cannot exceed 20 (to prevent API overload)")
+        if self.timeout_per_country < 1:
+            raise ValueError("Timeout per country must be at least 1 second")
 
 
 class EnvironmentManager:
@@ -66,6 +114,8 @@ class EnvironmentManager:
         """Initialize the environment manager and load all configurations"""
         self._circuit_breaker_config: Optional[CircuitBreakerConfig] = None
         self._rate_limit_config: Optional[RateLimitConfig] = None
+        self._redis_config: Optional[RedisConfig] = None
+        self._threading_config: Optional[ThreadingConfig] = None
         self._load_configurations()
 
     def _load_configurations(self) -> None:
@@ -73,11 +123,11 @@ class EnvironmentManager:
         logger.info("Loading environment configurations...")
 
         try:
-            # Load circuit breaker configuration
-            self._circuit_breaker_config = self._load_circuit_breaker_config()
 
-            # Load rate limiting configuration
+            self._circuit_breaker_config = self._load_circuit_breaker_config()
             self._rate_limit_config = self._load_rate_limit_config()
+            self._redis_config = self._load_redis_config()
+            self._threading_config = self._load_threading_config()
 
             logger.info("Environment configurations loaded successfully")
 
@@ -86,6 +136,15 @@ class EnvironmentManager:
             # Use safe defaults if configuration fails
             self._circuit_breaker_config = CircuitBreakerConfig(threshold=5, timeout=300)
             self._rate_limit_config = RateLimitConfig(base_delay=2.0, max_delay=60.0)
+            self._redis_config = RedisConfig(
+                url=REDIS_DEFAULTS["url"],
+                ttl=REDIS_DEFAULTS["ttl"],
+                max_connections=REDIS_DEFAULTS["max_connections"],
+                retry_attempts=REDIS_DEFAULTS["retry_attempts"],
+                retry_delay=REDIS_DEFAULTS["retry_delay"],
+                health_check_interval=REDIS_DEFAULTS["health_check_interval"],
+            )
+            self._threading_config = ThreadingConfig(max_workers=4, timeout_per_country=30)
 
     def _load_circuit_breaker_config(self) -> CircuitBreakerConfig:
         """
@@ -116,6 +175,49 @@ class EnvironmentManager:
         logger.debug(f"Rate limiter config - base_delay: {base_delay}s, max_delay: {max_delay}s")
 
         return RateLimitConfig(base_delay=base_delay, max_delay=max_delay)
+
+    def _load_redis_config(self) -> RedisConfig:
+        """
+        Load Redis configuration from environment variables
+
+        Returns:
+            RedisConfig: Validated configuration object
+        """
+        # Get environment variables with fallback defaults
+        url = os.getenv("REDIS_URL", REDIS_DEFAULTS["url"])
+        ttl = self._get_env_int("REDIS_TTL", default=REDIS_DEFAULTS["ttl"])
+        max_connections = self._get_env_int("REDIS_MAX_CONNECTIONS", default=REDIS_DEFAULTS["max_connections"])
+        retry_attempts = self._get_env_int("REDIS_RETRY_ATTEMPTS", default=REDIS_DEFAULTS["retry_attempts"])
+        retry_delay = self._get_env_float("REDIS_RETRY_DELAY", default=REDIS_DEFAULTS["retry_delay"])
+        health_check_interval = self._get_env_int(
+            "REDIS_HEALTH_CHECK_INTERVAL", default=REDIS_DEFAULTS["health_check_interval"]
+        )
+
+        logger.debug(f"Redis config - url: {url}, ttl: {ttl}s, max_connections: {max_connections}")
+
+        return RedisConfig(
+            url=url,
+            ttl=ttl,
+            max_connections=max_connections,
+            retry_attempts=retry_attempts,
+            retry_delay=retry_delay,
+            health_check_interval=health_check_interval,
+        )
+
+    def _load_threading_config(self) -> ThreadingConfig:
+        """
+        Load threading configuration from environment variables
+
+        Returns:
+            ThreadingConfig: Validated configuration object
+        """
+        # Get environment variables with fallback defaults
+        max_workers = self._get_env_int("THREADING_MAX_WORKERS", default=4)
+        timeout_per_country = self._get_env_int("THREADING_TIMEOUT_PER_COUNTRY", default=30)
+
+        logger.debug(f"Threading config - max_workers: {max_workers}, timeout_per_country: {timeout_per_country}s")
+
+        return ThreadingConfig(max_workers=max_workers, timeout_per_country=timeout_per_country)
 
     def _get_env_float(self, key: str, default: float) -> float:
         """
@@ -199,6 +301,49 @@ class EnvironmentManager:
             self._rate_limit_config = RateLimitConfig(base_delay=2.0, max_delay=60.0)
         return self._rate_limit_config
 
+    @property
+    def redis(self) -> RedisConfig:
+        """
+        Get Redis configuration
+
+        Returns:
+            RedisConfig: Current Redis settings
+        """
+        if self._redis_config is None:
+            # Fallback to defaults if not loaded
+            self._redis_config = RedisConfig(
+                url=REDIS_DEFAULTS["url"],
+                ttl=REDIS_DEFAULTS["ttl"],
+                max_connections=REDIS_DEFAULTS["max_connections"],
+                retry_attempts=REDIS_DEFAULTS["retry_attempts"],
+                retry_delay=REDIS_DEFAULTS["retry_delay"],
+                health_check_interval=REDIS_DEFAULTS["health_check_interval"],
+            )
+        return self._redis_config
+
+    @property
+    def threading(self) -> ThreadingConfig:
+        """
+        Get threading configuration
+
+        Returns:
+            ThreadingConfig: Current threading settings
+        """
+        if self._threading_config is None:
+            # Fallback to defaults if not loaded
+            self._threading_config = ThreadingConfig(max_workers=4, timeout_per_country=30)
+        return self._threading_config
+
+
+# Default configuration values
+REDIS_DEFAULTS: dict[str, Any] = {
+    "url": "redis://localhost:6379",
+    "ttl": 3600,
+    "max_connections": 10,
+    "retry_attempts": 3,
+    "retry_delay": 1.0,
+    "health_check_interval": 30,
+}
 
 # Global environment manager instance
 # This is like a singleton service in Angular or a global context in React
@@ -236,3 +381,23 @@ def get_rate_limit_config() -> RateLimitConfig:
         RateLimitConfig: Current rate limiting settings
     """
     return get_environment_manager().rate_limit
+
+
+def get_redis_config() -> RedisConfig:
+    """
+    Convenience function to get Redis configuration
+
+    Returns:
+        RedisConfig: Current Redis settings
+    """
+    return get_environment_manager().redis
+
+
+def get_threading_config() -> ThreadingConfig:
+    """
+    Convenience function to get threading configuration
+
+    Returns:
+        ThreadingConfig: Current threading settings
+    """
+    return get_environment_manager().threading
