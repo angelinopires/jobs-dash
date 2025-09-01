@@ -1,4 +1,4 @@
-# 🤖 Live Job Search Agent
+# 🏃‍♀️ JobsDash
 
 A powerful, real-time job scraping dashboard built with **Streamlit** and **jobspy**. This application allows users to search for job positions across multiple job boards simultaneously (coming soon), with an intuitive web interface and interactive results display.
 
@@ -42,9 +42,40 @@ pip install -e .[dev]     # Install Black, flake8, isort, mypy
 
 ## 🧪 Testing
 
+This project uses **pytest** for fast, reliable unit testing with parallel execution and coverage reporting.
+
+### **Quick Test Commands**
+
 ```bash
-python tests/run_tests.py
+# Run all tests in parallel (fastest)
+pytest -n auto
+
+# Run all tests sequentially
+pytest
+
+# Run specific test file
+pytest tests/test_dashboard.py -v
+
+# Run tests with coverage (optional)
+pytest --cov=. --cov-report=html
+
+# Run only unit tests (exclude slow tests)
+pytest -m "not slow" -n auto
+
+# Run specific test categories
+pytest -m "scraper"     # Scraper-related tests
+pytest -m "display"     # Display/UI tests
+pytest -m "cache"       # Caching tests
+pytest -m "rate_limit"  # Rate limiting tests
 ```
+
+### **Test Categories**
+
+- **Unit Tests** (`-m unit`): Fast, isolated function tests
+- **Scraper Tests** (`-m scraper`): Job scraping functionality
+- **Display Tests** (`-m display`): Dashboard UI and formatting
+- **Cache Tests** (`-m cache`): Redis and caching systems
+- **Rate Limit Tests** (`-m rate_limit`): Circuit breaker and rate limiting
 
 ## 🔧 Customization
 
@@ -108,6 +139,17 @@ python tests/run_tests.py
 - **Indeed**: Global job search engine
 - **Glassdoor**: Company reviews and job listings
 - **ZipRecruiter**: AI-powered job matching
+
+## 🚀 Next Steps
+
+Move this repository to a more robust environment with background workers to enable:
+
+- [ ] **Automatic cache warming** - Weekly background cache updates (currently silent on first visit)
+- [ ] **Analytics processing** - Daily → Weekly → Monthly aggregation
+- [ ] **Popular search updates** - Automatic trending job search updates
+- [ ] **Cache lifecycle management** - Automatic cleanup and optimization
+- [ ] **Scheduled maintenance** - Background file compression and cleanup
+
 
 ## 🤝 Contributing
 

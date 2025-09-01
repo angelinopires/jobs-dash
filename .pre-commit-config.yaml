@@ -56,8 +56,9 @@ repos:
     hooks:
       - id: run-tests
         name: Run Unit Tests
-        entry: python tests/run_tests.py
+        entry: pytest --tb=short
         language: python
         pass_filenames: false
         files: .*
         stages: [pre-push]
+        timeout: 60

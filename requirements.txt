@@ -10,3 +10,9 @@ flake8>=7.0.0           # Linter
 isort>=5.13.0           # Import sorter
 mypy>=1.8.0             # Static type checker
 pre-commit>=3.6.0       # Pre-commit hooks framework
+
+# Testing dependencies
+pytest>=8.4.0           # Testing framework
+pytest-xdist>=3.8.0     # Parallel test execution
+pytest-cov>=6.2.0       # Coverage reporting
+pytest-mock>=3.14.0     # Mocking utilities

@@ -7,5 +7,5 @@ Contains comprehensive tests for:
 - Integration tests for end-to-end workflows
 - Regression tests for known issues
 
-Run tests with: python tests/run_tests.py
+Run tests with: pytest -n auto
 """
