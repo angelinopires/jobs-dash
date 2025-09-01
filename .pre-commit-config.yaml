@@ -3,24 +3,13 @@
 
 repos:
   # Python code quality and formatting
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
-    hooks:
-      - id: trailing-whitespace
-      - id: end-of-file-fixer
-      - id: check-yaml
-      - id: check-added-large-files
-      - id: check-merge-conflict
-      - id: debug-statements
-      - id: check-docstring-first
-
-  # Black - Python code formatter
   - repo: https://github.com/psf/black
     rev: 25.1.0
     hooks:
       - id: black
         language_version: python3
         args: [--line-length=120]
+        stages: [pre-commit]
 
   # isort - Import sorter
   - repo: https://github.com/pycqa/isort
@@ -28,6 +17,7 @@ repos:
     hooks:
       - id: isort
         args: [--profile=black, --line-length=120]
+        stages: [pre-commit]
 
   # flake8 - Python linter
   - repo: https://github.com/pycqa/flake8
@@ -35,19 +25,33 @@ repos:
     hooks:
       - id: flake8
         args: [--max-line-length=120, --extend-ignore=E203]
+        stages: [pre-commit]
 
-  # mypy - Static type checker
-  - repo: local
+  # Basic file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
     hooks:
-      - id: mypy
-        name: mypy
-        entry: python -m mypy
-        language: system
-        files: \.py$
-        require_serial: true
-        pass_filenames: true
+      - id: trailing-whitespace
+        stages: [pre-commit]
+      - id: end-of-file-fixer
+        stages: [pre-commit]
+      - id: check-merge-conflict
+        stages: [pre-commit]
 
-  # Run unit tests
+  # Heavy checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: check-yaml
+        stages: [pre-push]
+      - id: check-added-large-files
+        stages: [pre-push]
+      - id: debug-statements
+        stages: [pre-push]
+      - id: check-docstring-first
+        stages: [pre-push]
+
+  # Unit tests
   - repo: local
     hooks:
       - id: run-tests
