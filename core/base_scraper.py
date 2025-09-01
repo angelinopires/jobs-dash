@@ -14,6 +14,7 @@ import pandas as pd
 from .cache_manager import CacheManager
 from .circuit_breaker import CircuitOpenException, get_circuit_breaker
 from .performance_monitor import PerformanceMonitor
+from .rate_limiter import get_rate_limiter
 from .threading_manager import ThreadingManager
 
 
@@ -37,6 +38,7 @@ class BaseScraper(ABC):
         self.min_delay = 1.0  # Minimum delay between API calls
 
         self.circuit_breaker = get_circuit_breaker(f"{scraper_name}_api")
+        self.rate_limiter = get_rate_limiter()
 
     # Abstract methods that each scraper must implement
 
@@ -60,25 +62,46 @@ class BaseScraper(ABC):
         """Call the actual scraping library/API."""
         pass
 
-    def _call_scraping_api_with_circuit_breaker(self, search_params: Dict[str, Any]) -> pd.DataFrame:
+    def _call_scraping_api_with_circuit_breaker(
+        self,
+        search_params: Dict[str, Any],
+        progress_callback: Optional[Callable[[str], None]] = None,
+        country: Optional[str] = None,
+    ) -> pd.DataFrame:
         """
-        Call scraping API with circuit breaker protection and fallback to cached results.
+        Call scraping API with circuit breaker protection and intelligent rate limiting.
 
-        This method wraps the actual API call with circuit breaker logic and provides
-        fallback to cached results when the circuit is open.
+        This method wraps the actual API call with circuit breaker logic and intelligent
+        rate limiting, providing fallback to cached results when the circuit is open.
 
         Args:
             search_params: API search parameters
+            progress_callback: Optional callback for user feedback
+            country: Optional country for per-country rate limiting
 
         Returns:
             pd.DataFrame: Job results or cached fallback
         """
+        # Use per-country endpoint for parallel requests, fallback to global endpoint
+        if country:
+            endpoint = f"{self.scraper_name}_api_{country.lower()}"
+        else:
+            endpoint = f"{self.scraper_name}_api"
+
         try:
-            # Use circuit breaker to call the actual API
-            return self.circuit_breaker.call(self._call_scraping_api, search_params)
+            return self.rate_limiter.call_with_rate_limiting(
+                self.circuit_breaker.call,
+                endpoint,
+                self._call_scraping_api,
+                search_params,
+                progress_callback=progress_callback,
+            )
 
         except CircuitOpenException:
             # Circuit is open - return cached results if available
+            if progress_callback:
+                progress_callback("⚠️ API temporarily unavailable, using cached results...")
+
             self.performance_monitor.log(
                 "Circuit Breaker", f"⚠️ Circuit OPEN for {self.scraper_name}, using cached results"
             )
@@ -187,7 +210,7 @@ class BaseScraper(ABC):
 
         # Call scraping API with circuit breaker protection
         start_time = time.time()
-        jobs_df = self._call_scraping_api_with_circuit_breaker(api_params)
+        jobs_df = self._call_scraping_api_with_circuit_breaker(api_params, country=country)
         api_time = time.time() - start_time
 
         # Process results
@@ -295,16 +318,15 @@ class BaseScraper(ABC):
         """
         return jobs_df
 
-    def _apply_rate_limiting(self) -> None:
-        """Apply rate limiting between API calls."""
-        current_time = time.time()
-        time_since_last = current_time - self.last_search_time
+    def _apply_rate_limiting(self, endpoint: str = "default") -> None:
+        """
+        Apply intelligent rate limiting between API calls.
 
-        if time_since_last < self.min_delay:
-            sleep_time = self.min_delay - time_since_last
-            time.sleep(sleep_time)
-
-        self.last_search_time = time.time()
+        Args:
+            endpoint: API endpoint identifier for per-endpoint rate limiting
+        """
+        # Use intelligent rate limiter instead of fixed delays
+        self.rate_limiter.wait_if_needed(endpoint)
 
     def get_performance_stats(self) -> Dict[str, Any]:
         """Get performance statistics for this scraper."""
@@ -332,3 +354,18 @@ class BaseScraper(ABC):
             dict: Circuit breaker status information
         """
         return self.circuit_breaker.get_status()
+
+    def get_rate_limiter_status(self, endpoint: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Get rate limiter status for monitoring.
+
+        Args:
+            endpoint: Specific endpoint to get status for, or None for all endpoints
+
+        Returns:
+            dict: Rate limiter status information
+        """
+        if endpoint:
+            return self.rate_limiter.get_endpoint_status(endpoint)
+        else:
+            return self.rate_limiter.get_all_endpoints_status()

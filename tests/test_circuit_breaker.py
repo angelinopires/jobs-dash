@@ -3,12 +3,6 @@ Unit Tests for Circuit Breaker Implementation
 
 This module tests the circuit breaker pattern implementation to ensure
 proper state transitions, configuration handling, and thread safety.
-
-For front-end developers learning Python:
-- This is like writing Jest tests for React components
-- setUp/tearDown are like beforeEach/afterEach in Jest
-- Mocking is like jest.mock() for dependencies
-- Assertions are like expect().toBe() in Jest
 """
 
 import threading

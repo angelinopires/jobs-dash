@@ -59,3 +59,7 @@ Thumbs.db
 *.tmp
 *.temp
 cache/
+
+# Environment variables
+.env
+.env.local

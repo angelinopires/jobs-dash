@@ -6,11 +6,6 @@ This module provides a base class for managers that need:
 - Registry pattern
 - Configuration management
 - Error handling with fallbacks
-
-For front-end developers learning Python:
-- This is like creating a base class in TypeScript/JavaScript
-- The singleton pattern is like a global context in React
-- The registry pattern is like a service container in Angular
 """
 
 import logging

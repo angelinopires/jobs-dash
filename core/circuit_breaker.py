@@ -3,12 +3,6 @@ Circuit Breaker Pattern Implementation
 
 This module implements the Circuit Breaker pattern to prevent cascading failures
 when external APIs are unavailable or slow.
-
-For front-end developers learning Python:
-- This is like implementing a retry mechanism with exponential backoff in JS
-- The enum is like a TypeScript union type or React state management
-- Threading.Lock is like a mutex in concurrent programming
-- The context manager (with statement) is like try/finally in JS
 """
 
 import logging
