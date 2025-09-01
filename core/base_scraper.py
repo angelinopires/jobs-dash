@@ -12,6 +12,7 @@ from typing import Any, Callable, Dict, List, Optional
 import pandas as pd
 
 from .cache_manager import CacheManager
+from .circuit_breaker import CircuitOpenException, get_circuit_breaker
 from .performance_monitor import PerformanceMonitor
 from .threading_manager import ThreadingManager
 
@@ -35,6 +36,8 @@ class BaseScraper(ABC):
         self.last_search_time = 0.0
         self.min_delay = 1.0  # Minimum delay between API calls
 
+        self.circuit_breaker = get_circuit_breaker(f"{scraper_name}_api")
+
     # Abstract methods that each scraper must implement
 
     @abstractmethod
@@ -56,6 +59,33 @@ class BaseScraper(ABC):
     def _call_scraping_api(self, search_params: Dict[str, Any]) -> pd.DataFrame:
         """Call the actual scraping library/API."""
         pass
+
+    def _call_scraping_api_with_circuit_breaker(self, search_params: Dict[str, Any]) -> pd.DataFrame:
+        """
+        Call scraping API with circuit breaker protection and fallback to cached results.
+
+        This method wraps the actual API call with circuit breaker logic and provides
+        fallback to cached results when the circuit is open.
+
+        Args:
+            search_params: API search parameters
+
+        Returns:
+            pd.DataFrame: Job results or cached fallback
+        """
+        try:
+            # Use circuit breaker to call the actual API
+            return self.circuit_breaker.call(self._call_scraping_api, search_params)
+
+        except CircuitOpenException:
+            # Circuit is open - return cached results if available
+            self.performance_monitor.log(
+                "Circuit Breaker", f"⚠️ Circuit OPEN for {self.scraper_name}, using cached results"
+            )
+
+            # Return empty DataFrame as fallback
+            # In Phase 3, this will be enhanced with Redis cache fallback
+            return pd.DataFrame()
 
     def search_jobs(
         self, search_term: str = "", where: str = "", include_remote: bool = True, **kwargs: Any
@@ -155,9 +185,9 @@ class BaseScraper(ABC):
 
         api_params = self._build_api_search_params(**filters)
 
-        # Call scraping API
+        # Call scraping API with circuit breaker protection
         start_time = time.time()
-        jobs_df = self._call_scraping_api(api_params)
+        jobs_df = self._call_scraping_api_with_circuit_breaker(api_params)
         api_time = time.time() - start_time
 
         # Process results
@@ -293,3 +323,12 @@ class BaseScraper(ABC):
     def clear_cache(self) -> None:
         """Clear all cached results for this scraper."""
         self.cache_manager.clear_scraper_cache(self.scraper_name)
+
+    def get_circuit_breaker_status(self) -> Dict[str, Any]:
+        """
+        Get circuit breaker status for monitoring.
+
+        Returns:
+            dict: Circuit breaker status information
+        """
+        return self.circuit_breaker.get_status()
