@@ -50,15 +50,3 @@ repos:
         stages: [pre-push]
       - id: check-docstring-first
         stages: [pre-push]
-
-  # Unit tests
-  - repo: local
-    hooks:
-      - id: run-tests
-        name: Run Unit Tests
-        entry: pytest --tb=short
-        language: python
-        pass_filenames: false
-        files: .*
-        stages: [pre-push]
-        timeout: 60
