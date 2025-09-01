@@ -2,7 +2,7 @@
 Search Analytics Module
 
 This module provides lightweight search logging and analytics to track
-user search patterns and optimize cache warming strategies.
+user search patterns and optimize cache strategies.
 """
 
 import json

@@ -144,7 +144,7 @@ pytest -m "rate_limit"  # Rate limiting tests
 
 Move this repository to a more robust environment with background workers to enable:
 
-- [ ] **Automatic cache warming** - Weekly background cache updates (currently silent on first visit)
+- [ ] **Smart caching** - Redis → File → API fallback strategy
 - [ ] **Analytics processing** - Daily → Weekly → Monthly aggregation
 - [ ] **Popular search updates** - Automatic trending job search updates
 - [ ] **Cache lifecycle management** - Automatic cleanup and optimization

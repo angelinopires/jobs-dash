@@ -12,7 +12,6 @@ This module provides:
 import logging
 import threading
 import time
-import warnings
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from queue import Queue
@@ -22,11 +21,6 @@ from typing import Any, Callable, Dict, List, Optional
 import pandas as pd
 
 from config.environment import get_threading_config
-
-# Suppress Streamlit threading warnings - they're expected and harmless
-warnings.filterwarnings("ignore", category=UserWarning, module="streamlit")
-warnings.filterwarnings("ignore", message=".*missing ScriptRunContext.*")
-warnings.filterwarnings("ignore", message=".*Session state does not function.*")
 
 
 @dataclass
