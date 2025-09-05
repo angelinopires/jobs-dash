@@ -92,7 +92,7 @@ class SearchAnalytics:
         location: str,
         remote: bool = False,
         scraper_name: str = "indeed",
-        posting_age: str = "any",
+        posting_age: str = "Past Week",
     ) -> None:
         """
         Log a search query
@@ -190,50 +190,6 @@ class SearchAnalytics:
         sorted_locations = sorted(location_counts.items(), key=lambda x: x[1], reverse=True)
         return sorted_locations[:limit]
 
-    def get_popular_posting_ages(self, days: int = 30, limit: int = 10) -> List[Tuple[str, int]]:
-        """
-        Get most popular posting age filters in the last N days
-
-        Args:
-            days: Number of days to look back
-            limit: Maximum number of results to return
-
-        Returns:
-            List of (posting_age, count) tuples sorted by popularity
-        """
-        posting_age_counts: Dict[str, int] = defaultdict(int)
-
-        for search_key, count in self.get_popular_searches(days, limit * 5):
-            parts = search_key.split("|")
-            if len(parts) >= 4:
-                posting_age = parts[3]
-                posting_age_counts[posting_age] += count
-
-        sorted_posting_ages = sorted(posting_age_counts.items(), key=lambda x: x[1], reverse=True)
-        return sorted_posting_ages[:limit]
-
-    def get_search_trends(self, days: int = 7) -> Dict[str, int]:
-        """
-        Get search trends over the last N days
-
-        Args:
-            days: Number of days to analyze
-
-        Returns:
-            Dictionary with daily search counts
-        """
-        trends = {}
-
-        for i in range(days):
-            date = (datetime.now() - timedelta(days=i)).strftime("%Y-%m-%d")
-            if date in self._daily_searches:
-                daily_total = sum(self._daily_searches[date].values())
-                trends[date] = daily_total
-            else:
-                trends[date] = 0
-
-        return trends
-
     def get_analytics_summary(self) -> Dict[str, Any]:
         """
         Get a summary of search analytics
@@ -254,64 +210,5 @@ class SearchAnalytics:
             "unique_search_combinations": len(self._search_counts),
             "popular_job_titles": popular_jobs,
             "popular_locations": popular_locations,
-            "search_trends_7d": self.get_search_trends(days=7),
             "log_file_size_mb": round(self.log_file.stat().st_size / (1024 * 1024), 2) if self.log_file.exists() else 0,
         }
-
-    def cleanup_old_data(self, days_to_keep: int = 90) -> int:
-        """
-        Clean up old search data to keep the log file manageable
-
-        Args:
-            days_to_keep: Number of days of data to keep
-
-        Returns:
-            Number of old entries removed
-        """
-        cutoff_date = datetime.now() - timedelta(days=days_to_keep)
-        cutoff_str = cutoff_date.strftime("%Y-%m-%d")
-
-        removed_count = 0
-        dates_to_remove = []
-
-        for date in self._daily_searches:
-            if date < cutoff_str:
-                removed_count += sum(self._daily_searches[date].values())
-                dates_to_remove.append(date)
-
-        for date in dates_to_remove:
-            del self._daily_searches[date]
-
-        if removed_count > 0:
-            logger.info(f"Cleaned up {removed_count} old search records")
-            self._save_data()
-
-        return removed_count
-
-    def export_data(self, output_file: str = "search_analytics_export.json") -> bool:
-        """
-        Export search analytics data to a file
-
-        Args:
-            output_file: Output file path
-
-        Returns:
-            True if export was successful
-        """
-        try:
-            data = {
-                "search_counts": dict(self._search_counts),
-                "daily_searches": {date: dict(searches) for date, searches in self._daily_searches.items()},
-                "analytics_summary": self.get_analytics_summary(),
-                "export_date": datetime.now().isoformat(),
-            }
-
-            with open(output_file, "w", encoding="utf-8") as f:
-                json.dump(data, f, indent=2)
-
-            logger.info(f"Exported search analytics to {output_file}")
-            return True
-
-        except Exception as e:
-            logger.error(f"Failed to export search analytics: {e}")
-            return False

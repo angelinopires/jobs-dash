@@ -9,7 +9,6 @@ import logging
 import threading
 import time
 from enum import Enum
-from functools import wraps
 from typing import Any, Callable, Optional, TypeVar
 
 from config.environment import get_circuit_breaker_config
@@ -210,35 +209,6 @@ class CircuitOpenException(Exception):
     """Exception raised when circuit breaker is open"""
 
     pass
-
-
-def circuit_breaker(name: str, config: Optional[dict] = None) -> Callable[[Callable[..., T]], Callable[..., T]]:
-    """
-    Decorator to apply circuit breaker pattern to functions
-
-    This is like a higher-order component in React or a decorator in TypeScript.
-
-    Args:
-        name: Circuit breaker name
-        config: Optional configuration override
-
-    Returns:
-        Callable: Decorated function
-    """
-
-    def decorator(func: Callable[..., T]) -> Callable[..., T]:
-        # Create circuit breaker instance for this function
-        cb = CircuitBreaker(name, config)
-
-        @wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> T:
-            return cb.call(func, *args, **kwargs)
-
-        # Attach circuit breaker to wrapper for access
-        setattr(wrapper, "circuit_breaker", cb)
-        return wrapper
-
-    return decorator
 
 
 # Global circuit breaker registry

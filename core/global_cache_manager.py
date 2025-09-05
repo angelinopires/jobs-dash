@@ -60,7 +60,7 @@ class GlobalCacheManager:
         self._redis_hits = 0
         self._file_hits = 0
 
-        # Cache warming for popular searches
+        # Popular search combinations for analytics
         self._popular_searches = {
             "software_engineer": ["Global", "San Francisco", "New York", "Remote"],
             "data_scientist": ["Global", "San Francisco", "New York", "Remote"],
@@ -77,7 +77,7 @@ class GlobalCacheManager:
         job_title: str,
         location: str,
         remote: bool = False,
-        posting_age: str = "any",
+        posting_age: str = "Past Week",
         **kwargs: Any,
     ) -> str:
         """
@@ -130,7 +130,7 @@ class GlobalCacheManager:
         location: str,
         remote: bool = False,
         scraper_name: str = "indeed",
-        posting_age: str = "any",
+        posting_age: str = "Past Week",
     ) -> None:
         """
         Log a search query for analytics
@@ -144,87 +144,9 @@ class GlobalCacheManager:
         """
         self.search_analytics.log_search(job_title, location, remote, scraper_name, posting_age)
 
-    def warm_cache_for_popular_searches(self, use_analytics: bool = True) -> int:
-        """
-        Warm cache with popular search combinations
-
-        Prioritizes "Global" searches and can use analytics data for optimization.
-
-        Args:
-            use_analytics: Whether to use search analytics to optimize warming
-
-        Returns:
-            int: Number of cache entries warmed
-        """
-        warmed_count = 0
-
-        if use_analytics:
-            # Get popular searches from analytics
-            popular_searches = self.search_analytics.get_popular_searches(days=30, limit=20)
-
-            # Use analytics data if available
-            if popular_searches:
-                logger.info(f"Using analytics data for cache warming: {len(popular_searches)} popular searches")
-
-                for search_key, count in popular_searches:
-                    parts = search_key.split("|")
-                    if len(parts) >= 5:
-                        job_title, location, remote_str, posting_age, scraper = (
-                            parts[0],
-                            parts[1],
-                            parts[2],
-                            parts[3],
-                            parts[4],
-                        )
-                        remote = remote_str.lower() == "true"
-
-                        cache_key = self.generate_cache_key(
-                            scraper_name=scraper,
-                            job_title=job_title,
-                            location=location,
-                            remote=remote,
-                            posting_age=posting_age,
-                        )
-
-                        if not self.exists(cache_key):
-                            logger.debug(f"Analytics-based cache warming: {job_title} in {location} (count: {count})")
-                            warmed_count += 1
-
-                return warmed_count
-
-                # Fallback to predefined popular searches
-        for job_title, locations in self._popular_searches.items():
-            # Prioritize "Global" searches first
-            prioritized_locations = sorted(locations, key=lambda x: x != "Global")
-
-            for location in prioritized_locations:
-                for posting_age in self._popular_posting_ages:
-                    # Generate cache keys for popular combinations
-                    cache_key = self.generate_cache_key(
-                        scraper_name="indeed",
-                        job_title=job_title,
-                        location=location,
-                        remote=(location.lower() == "remote"),
-                        posting_age=posting_age,
-                    )
-
-                    # Check if already cached
-                    if not self.exists(cache_key):
-                        logger.debug(f"Predefined cache warming: {job_title} in {location} ({posting_age})")
-                        # Real implementation: Make API call to warm cache
-                        try:
-                            warmed_count += self._warm_cache_entry(
-                                cache_key, job_title, location, posting_age, remote=(location.lower() == "remote")
-                            )
-                        except Exception as e:
-                            logger.warning(f"Failed to warm cache for {job_title} in {location}: {e}")
-
-        logger.info(f"Cache warming completed for {warmed_count} popular searches")
-        return warmed_count
-
     def get_popular_search_combinations(self) -> Dict[str, list[str]]:
         """
-        Get the most popular search combinations for cache warming
+        Get the most popular search combinations for analytics
 
         Returns:
             Dict: Job titles mapped to their popular locations
@@ -233,7 +155,7 @@ class GlobalCacheManager:
 
     def add_popular_search(self, job_title: str, locations: list[str]) -> None:
         """
-        Add a new popular search combination for cache warming
+        Add a new popular search combination for analytics
 
         Args:
             job_title: Job title to add
@@ -277,13 +199,13 @@ class GlobalCacheManager:
 
         # Generate recommendations
         if cache_hit_rate < 50:
-            recommendations.append("Low cache hit rate - consider expanding cache warming strategy")
+            recommendations.append("Low cache hit rate - consider expanding cache strategy")
 
         if analytics.get("total_searches", 0) > 100:
-            recommendations.append("High search volume - analytics-based cache warming recommended")
+            recommendations.append("High search volume - analytics-based cache optimization recommended")
 
         if len(popular_jobs) > 0 and popular_jobs[0][1] > 10:
-            recommendations.append(f"'{popular_jobs[0][0]}' is very popular - prioritize in cache warming")
+            recommendations.append(f"'{popular_jobs[0][0]}' is very popular - prioritize in cache strategy")
 
         return insights
 
@@ -634,70 +556,6 @@ class GlobalCacheManager:
         except Exception as e:
             logger.error(f"Error clearing Redis cache: {e}")
             return False
-
-    def _warm_cache_entry(
-        self, cache_key: str, job_title: str, location: str, posting_age: str, remote: bool = False
-    ) -> int:
-        """
-        Warm a single cache entry by making an API call
-
-        Args:
-            cache_key: The cache key to warm
-            job_title: Job title to search for
-            location: Location to search in
-            posting_age: Posting age filter
-            remote: Whether to search for remote jobs
-
-        Returns:
-            int: 1 if successful, 0 if failed
-        """
-        try:
-            # Import here to avoid circular imports
-            from scrapers.optimized_indeed_scraper import get_indeed_scraper
-
-            # Get scraper instance
-            scraper = get_indeed_scraper()
-
-            # Make API call to get jobs
-            result = scraper.search_jobs(
-                search_term=job_title,
-                where=location,
-                include_remote=remote,
-                time_filter=posting_age,
-                results_wanted=50,  # Reasonable number for cache warming
-            )
-
-            if result.get("success") and result.get("jobs") is not None:
-                jobs = result["jobs"]
-                if len(jobs) > 0:
-                    # Store in cache
-                    metadata = {
-                        "source": "cache_warming",
-                        "job_title": job_title,
-                        "location": location,
-                        "posting_age": posting_age,
-                        "remote": remote,
-                        "job_count": len(jobs),
-                        "warmed_at": datetime.now().isoformat(),
-                    }
-
-                    success = self.set(cache_key, jobs, metadata)
-                    if success:
-                        logger.info(f"✅ Cache warmed successfully: {job_title} in {location} ({len(jobs)} jobs)")
-                        return 1
-                    else:
-                        logger.warning(f"❌ Failed to store warmed cache: {job_title} in {location}")
-                        return 0
-                else:
-                    logger.debug(f"No jobs found for cache warming: {job_title} in {location}")
-                    return 0
-            else:
-                logger.debug(f"Search failed for cache warming: {job_title} in {location}")
-                return 0
-
-        except Exception as e:
-            logger.error(f"Error warming cache for {job_title} in {location}: {e}")
-            return 0
 
     def close(self) -> None:
         """Close cache manager and cleanup resources"""

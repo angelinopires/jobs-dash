@@ -327,31 +327,6 @@ class CacheManager:
         except Exception as e:
             print(f"Warning: Could not clear scraper cache: {e}")
 
-    def get_cache_stats(self) -> Dict[str, Any]:
-        """Get statistics about current cache usage."""
-        # Get session count - thread-safe
-        try:
-            session_count = len(st.session_state.job_search_cache)
-        except Exception:
-            session_count = 0
-
-        # Count file cache entries
-        file_count = 0
-        if os.path.exists(self.cache_file):
-            try:
-                with open(self.cache_file, "r") as f:
-                    file_cache = json.load(f)
-                file_count = len(file_cache)
-            except Exception:
-                pass
-
-        return {
-            "session_entries": session_count,
-            "file_entries": file_count,
-            "cache_ttl_minutes": self.cache_ttl_minutes,
-            "cache_file": self.cache_file,
-        }
-
     def _get_cached_result_from_file(self, cache_key: str) -> Optional[Dict[str, Any]]:
         """
         Get cached result from file cache (fallback for threads).
