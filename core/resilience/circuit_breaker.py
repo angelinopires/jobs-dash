@@ -11,7 +11,7 @@ import time
 from enum import Enum
 from typing import Any, Callable, Optional, TypeVar
 
-from settings.environment import get_circuit_breaker_config
+from settings.infrastructure_config import get_circuit_breaker_config
 
 # Set up logging
 logger = logging.getLogger(__name__)

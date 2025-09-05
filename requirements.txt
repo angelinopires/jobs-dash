@@ -16,3 +16,4 @@ pytest>=8.4.0           # Testing framework
 pytest-xdist>=3.8.0     # Parallel test execution
 pytest-cov>=6.2.0       # Coverage reporting
 pytest-mock>=3.14.0     # Mocking utilities
+python-dotenv>=1.0.0

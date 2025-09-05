@@ -10,6 +10,10 @@ import os
 from dataclasses import dataclass
 from typing import Optional
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 # Set up logging for configuration loading
 logger = logging.getLogger(__name__)
 
@@ -19,11 +23,11 @@ class CircuitBreakerConfig:
     """
     Circuit Breaker Configuration
 
-    This dataclass holds all circuit breaker settings.
+    This dataclass holds all circuit breaker settings with hardcoded defaults.
     """
 
-    threshold: int
-    timeout: int
+    threshold: int = 5
+    timeout: int = 300
 
     def __post_init__(self) -> None:
         """Validate configuration after initialization"""
@@ -38,15 +42,15 @@ class RedisConfig:
     """
     Redis Configuration
 
-    This dataclass holds all Redis connection settings.
+    This dataclass holds all Redis connection settings with sensible defaults.
     """
 
     url: str
     ttl: int
-    max_connections: int
-    retry_attempts: int
-    retry_delay: float
-    health_check_interval: int
+    max_connections: int = 10
+    retry_attempts: int = 3
+    retry_delay: float = 1.0
+    health_check_interval: int = 30
 
     def __post_init__(self) -> None:
         """Validate configuration after initialization"""
@@ -71,7 +75,7 @@ class ThreadingConfig:
     """
 
     max_workers: int
-    timeout_per_country: int
+    timeout_per_country: int = 30
 
     def __post_init__(self) -> None:
         """Validate configuration after initialization"""
@@ -135,32 +139,24 @@ class EnvironmentManager:
         except Exception as e:
             logger.error(f"Failed to load environment configurations: {e}")
             # Use safe defaults if configuration fails
-            self._circuit_breaker_config = CircuitBreakerConfig(threshold=5, timeout=300)
+            self._circuit_breaker_config = CircuitBreakerConfig()
             self._redis_config = RedisConfig(
                 url="redis://localhost:6379",
                 ttl=3600,
                 max_connections=10,
-                retry_attempts=3,
-                retry_delay=1.0,
-                health_check_interval=30,
             )
-            self._threading_config = ThreadingConfig(max_workers=4, timeout_per_country=30)
+            self._threading_config = ThreadingConfig(max_workers=4)
             self._cache_config = CacheConfig(ttl_seconds=3600)  # 1 hour default
 
     def _load_circuit_breaker_config(self) -> CircuitBreakerConfig:
         """
-        Load circuit breaker configuration from environment variables
+        Load circuit breaker configuration with hardcoded defaults
 
         Returns:
             CircuitBreakerConfig: Validated configuration object
         """
-        # Get environment variables with fallback defaults
-        threshold = self._get_env_int("CIRCUIT_BREAKER_THRESHOLD", default=5)
-        timeout = self._get_env_int("CIRCUIT_BREAKER_TIMEOUT", default=300)
-
-        logger.debug(f"Circuit breaker config - threshold: {threshold}, timeout: {timeout}s")
-
-        return CircuitBreakerConfig(threshold=threshold, timeout=timeout)
+        logger.debug("Circuit breaker config - using hardcoded defaults: threshold=5, timeout=300s")
+        return CircuitBreakerConfig()
 
     def _load_redis_config(self) -> RedisConfig:
         """
@@ -173,9 +169,6 @@ class EnvironmentManager:
         url = os.getenv("REDIS_URL", "redis://localhost:6379")
         ttl = self._get_env_int("REDIS_TTL", default=3600)
         max_connections = self._get_env_int("REDIS_MAX_CONNECTIONS", default=10)
-        retry_attempts = self._get_env_int("REDIS_RETRY_ATTEMPTS", default=3)
-        retry_delay = self._get_env_float("REDIS_RETRY_DELAY", default=1.0)
-        health_check_interval = self._get_env_int("REDIS_HEALTH_CHECK_INTERVAL", default=30)
 
         logger.debug(f"Redis config - url: {url}, ttl: {ttl}s, max_connections: {max_connections}")
 
@@ -183,9 +176,6 @@ class EnvironmentManager:
             url=url,
             ttl=ttl,
             max_connections=max_connections,
-            retry_attempts=retry_attempts,
-            retry_delay=retry_delay,
-            health_check_interval=health_check_interval,
         )
 
     def _load_threading_config(self) -> ThreadingConfig:
@@ -197,11 +187,10 @@ class EnvironmentManager:
         """
         # Get environment variables with fallback defaults
         max_workers = self._get_env_int("THREADING_MAX_WORKERS", default=4)
-        timeout_per_country = self._get_env_int("THREADING_TIMEOUT_PER_COUNTRY", default=30)
 
-        logger.debug(f"Threading config - max_workers: {max_workers}, timeout_per_country: {timeout_per_country}s")
+        logger.debug(f"Threading config - max_workers: {max_workers}, timeout_per_country: 30s (hardcoded)")
 
-        return ThreadingConfig(max_workers=max_workers, timeout_per_country=timeout_per_country)
+        return ThreadingConfig(max_workers=max_workers)
 
     def _load_cache_config(self) -> CacheConfig:
         """
@@ -286,7 +275,7 @@ class EnvironmentManager:
         """
         if self._circuit_breaker_config is None:
             # Fallback to defaults if not loaded
-            self._circuit_breaker_config = CircuitBreakerConfig(threshold=5, timeout=300)
+            self._circuit_breaker_config = CircuitBreakerConfig()
         return self._circuit_breaker_config
 
     @property
@@ -303,9 +292,6 @@ class EnvironmentManager:
                 url="redis://localhost:6379",
                 ttl=3600,
                 max_connections=10,
-                retry_attempts=3,
-                retry_delay=1.0,
-                health_check_interval=30,
             )
         return self._redis_config
 
@@ -319,7 +305,7 @@ class EnvironmentManager:
         """
         if self._threading_config is None:
             # Fallback to defaults if not loaded
-            self._threading_config = ThreadingConfig(max_workers=4, timeout_per_country=30)
+            self._threading_config = ThreadingConfig(max_workers=4)
         return self._threading_config
 
     @property

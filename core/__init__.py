@@ -6,7 +6,7 @@ monitoring, scraping, and resilience mechanisms.
 """
 
 # Import from submodules
-from .cache import CacheKeyGenerator
+from .cache import SimpleCacheKeyGenerator
 from .monitoring import PerformanceMonitor, SearchAnalytics
 from .redis import RedisCacheManager, RedisManager
 from .resilience import (
@@ -25,7 +25,7 @@ from .search import SearchOptimizer, SearchOrchestrator, SearchResult, SearchTas
 
 __all__ = [
     # Cache
-    "CacheKeyGenerator",
+    "SimpleCacheKeyGenerator",
     # Redis
     "RedisManager",
     "RedisCacheManager",

@@ -5,6 +5,6 @@ Provides various caching strategies including file-based, Redis-based,
 and hybrid caching solutions.
 """
 
-from .cache_key_generator import CacheKeyGenerator
+from .simple_cache_key_generator import SimpleCacheKeyGenerator
 
-__all__ = ["CacheKeyGenerator"]
+__all__ = ["SimpleCacheKeyGenerator"]

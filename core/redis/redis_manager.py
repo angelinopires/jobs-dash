@@ -4,20 +4,17 @@ Redis Connection Manager
 This module provides Redis connection management with connection pooling,
 retry logic, health checks, and JSON serialization for job data.
 It includes fallback to file cache when Redis is unavailable.
-
-Think of this like a database connection pool in Node.js, but for Redis.
 """
 
 import json
 import logging
 import time
 from typing import Any, Dict, Optional
-from urllib.parse import urlparse
 
 import redis
 from redis.exceptions import AuthenticationError, ConnectionError, RedisError, TimeoutError
 
-from settings.environment import get_redis_config
+from settings.infrastructure_config import get_redis_config
 
 logger = logging.getLogger(__name__)
 
@@ -69,21 +66,35 @@ class RedisManager:
     def _initialize_connection(self) -> None:
         """Initialize Redis connection with connection pooling"""
         try:
-            # Parse Redis URL to extract connection parameters
-            parsed_url = urlparse(self.redis_url)
+            # Handle different Redis URL formats
+            if self.redis_url.startswith(("redis://", "rediss://")):
+                # Standard Redis URL format - use from_url
+                self._redis_client = redis.Redis.from_url(
+                    self.redis_url,
+                    max_connections=self.max_connections,
+                    retry_on_timeout=True,
+                    socket_connect_timeout=5,
+                    socket_timeout=5,
+                    decode_responses=True,
+                )
+            else:
+                # Redis Cloud format: host:port - parse manually
+                if ":" in self.redis_url:
+                    host, port_str = self.redis_url.rsplit(":", 1)
+                    port = int(port_str)
+                else:
+                    host = self.redis_url
+                    port = 6379
 
-            # Create Redis connection pool
-            self._redis_client = redis.Redis(
-                host=parsed_url.hostname or "localhost",
-                port=parsed_url.port or 6379,
-                password=parsed_url.password,
-                db=int(parsed_url.path[1:]) if parsed_url.path and len(parsed_url.path) > 1 else 0,
-                max_connections=self.max_connections,
-                retry_on_timeout=True,
-                socket_connect_timeout=5,
-                socket_timeout=5,
-                decode_responses=True,  # Return strings instead of bytes
-            )
+                self._redis_client = redis.Redis(
+                    host=host,
+                    port=port,
+                    max_connections=self.max_connections,
+                    retry_on_timeout=True,
+                    socket_connect_timeout=5,
+                    socket_timeout=5,
+                    decode_responses=True,
+                )
 
             # Test connection
             self._test_connection()

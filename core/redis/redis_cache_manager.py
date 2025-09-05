@@ -6,7 +6,7 @@ Replaces the current file-based caching with a Redis → API strategy.
 
 Key Features:
 - Uses existing RedisManager for robust connection management
-- Uses CacheKeyGenerator for consistent, normalized keys
+- Uses SimpleCacheKeyGenerator for consistent, predictable keys
 - TTL-based expiration
 - Graceful Redis failure handling
 """
@@ -14,8 +14,8 @@ Key Features:
 import logging
 from typing import Any, Dict, List, Optional
 
-from core.cache.cache_key_generator import CacheKeyGenerator
-from settings.environment import get_cache_config
+from core.cache.simple_cache_key_generator import SimpleCacheKeyGenerator
+from settings.infrastructure_config import get_cache_config
 
 from .redis_manager import RedisManager
 
@@ -44,9 +44,9 @@ class RedisCacheManager:
         cache_config = get_cache_config()
         self.cache_ttl_seconds = cache_ttl_seconds or cache_config.ttl_seconds
 
-        # Initialize Redis manager and key generator
+        # Initialize Redis manager and simple key generator
         self.redis_manager = RedisManager()
-        self.key_generator = CacheKeyGenerator()
+        self.simple_key_generator = SimpleCacheKeyGenerator()
 
         # Performance tracking
         self._cache_stats = {"hits": 0, "misses": 0, "errors": 0, "total_requests": 0}
@@ -77,13 +77,13 @@ class RedisCacheManager:
             return None
 
         try:
-            # Map time_filter to posting_age for cache key generation
-            cache_kwargs = kwargs.copy()
-            if "time_filter" in cache_kwargs:
-                cache_kwargs["posting_age"] = cache_kwargs.pop("time_filter")
-            # Generate cache key
-            cache_key = self.key_generator.generate_cache_key(
-                scraper=scraper, search_term=search_term, location=country, **cache_kwargs
+            # Generate cache key using the generator
+            cache_key = self.simple_key_generator.generate_cache_key(
+                scraper=scraper,
+                search_term=search_term,
+                country=country,
+                remote=kwargs.get("remote", True),
+                time_filter=kwargs.get("time_filter", "any"),
             )
 
             # Try to get from Redis
@@ -130,13 +130,13 @@ class RedisCacheManager:
             return False
 
         try:
-            # Map time_filter to posting_age for cache key generation
-            cache_kwargs = kwargs.copy()
-            if "time_filter" in cache_kwargs:
-                cache_kwargs["posting_age"] = cache_kwargs.pop("time_filter")
-            # Generate cache key
-            cache_key = self.key_generator.generate_cache_key(
-                scraper=scraper, search_term=search_term, location=country, **cache_kwargs
+            # Generate cache key using the generator
+            cache_key = self.simple_key_generator.generate_cache_key(
+                scraper=scraper,
+                search_term=search_term,
+                country=country,
+                remote=kwargs.get("remote", True),
+                time_filter=kwargs.get("time_filter", "any"),
             )
 
             # Store in Redis with TTL
@@ -169,16 +169,9 @@ class RedisCacheManager:
         """
         if not self.redis_manager.is_healthy():
             logger.debug("Redis unhealthy, cannot clear scraper cache")
-            return 0
+            return -1
 
         try:
-            # In a production Redis setup, we'd need to either:
-            # 1. Maintain a set of active keys (adds complexity)
-            # 2. Use Redis SCAN to find matching keys (expensive)
-            # 3. Use Redis key namespacing (requires infrastructure changes)
-
-            # For now, we log this as a limitation and return -1 to indicate
-            # that this operation is not fully supported in Redis-only mode
             logger.warning(
                 f"Clear scraper cache for '{scraper_name}' requested, but not fully "
                 f"supported in Redis-only mode. Keys will naturally expire after "

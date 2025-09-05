@@ -2,11 +2,11 @@
 Intelligent Rate Limiter Implementation
 
 This module implements sophisticated rate limiting with:
-- Exponential backoff algorithm (2^attempt seconds, capped at 60s)
+- Exponential backoff algorithm (1.5^attempt seconds, capped at 10s)
 - Jitter implementation (random delays 0.8-1.2x multiplier)
-- Response time adaptation (1.5x delay when API is slow)
+- Response time adaptation (1.2-1.4x delay when API is slow)
 - Per-API endpoint tracking
-- Base delay: 2-3 seconds with random jitter
+- Base delay: 1.5-2 seconds with random jitter
 """
 
 import logging
@@ -45,13 +45,13 @@ class RateLimitConfig:
     Think of it like a TypeScript interface for rate limiting props.
     """
 
-    base_delay: float = 2.0  # Base delay in seconds
-    max_delay: float = 60.0  # Maximum delay in seconds
+    base_delay: float = 1.5  # Base delay in seconds
+    max_delay: float = 10.0  # Maximum delay in seconds
     jitter_factor: float = 0.2  # Jitter range (0.8-1.2x multiplier)
-    slow_response_threshold: float = 5.0  # Response time threshold for "slow" state
-    aggressive_response_threshold: float = 10.0  # Response time threshold for "aggressive" state
-    slow_multiplier: float = 1.5  # Delay multiplier when API is slow
-    aggressive_multiplier: float = 2.0  # Delay multiplier when API is very slow
+    slow_response_threshold: float = 8.0  # Response time threshold for "slow" state
+    aggressive_response_threshold: float = 15.0  # Response time threshold for "aggressive" state
+    slow_multiplier: float = 1.2  # Delay multiplier when API is slow
+    aggressive_multiplier: float = 1.4  # Delay multiplier when API is very slow
 
     def __post_init__(self) -> None:
         """Validate configuration after initialization"""
@@ -385,9 +385,24 @@ def get_rate_limiter(config: Optional[RateLimitConfig] = None) -> IntelligentRat
         IntelligentRateLimiter: Global rate limiter instance
     """
     global _rate_limiter
-    if _rate_limiter is None:
+    if _rate_limiter is None or config is not None:
+        if config is None:
+            # Import here to avoid circular imports
+            try:
+                from config.environment_manager import get_rate_limit_config
+
+                config = get_rate_limit_config()
+            except ImportError:
+                # Fallback to default if config module not available
+                config = RateLimitConfig()
         _rate_limiter = IntelligentRateLimiter(config)
     return _rate_limiter
+
+
+def reset_rate_limiter() -> None:
+    """Reset the global rate limiter instance (useful for testing different configs)."""
+    global _rate_limiter
+    _rate_limiter = None
 
 
 def rate_limit(endpoint: str) -> Callable[[Callable[..., Any]], Callable[..., Any]]:

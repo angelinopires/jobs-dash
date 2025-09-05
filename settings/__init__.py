@@ -4,7 +4,7 @@ Settings module for the job dashboard.
 Contains environment configuration and application settings.
 """
 
-from .environment import (
+from .infrastructure_config import (
     CacheConfig,
     CircuitBreakerConfig,
     RedisConfig,

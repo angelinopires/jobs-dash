@@ -20,7 +20,7 @@ from typing import Any, Callable, Dict, List, Optional
 
 import pandas as pd
 
-from settings.environment import get_threading_config
+from settings.infrastructure_config import get_threading_config
 
 
 @dataclass

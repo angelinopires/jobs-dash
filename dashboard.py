@@ -572,6 +572,22 @@ def display_search_results() -> None:
         if col not in filtered_jobs_df.columns:
             filtered_jobs_df[col] = "N/A"
 
+    def is_valid_job_row(row: pd.Series) -> bool:
+        """Check if a job row has valid data (not empty/None/N/A)."""
+        title = str(row.get("title", "")).strip()
+        company = str(row.get("company_name", "")).strip()
+
+        # Consider invalid if both title and company are empty or placeholder values
+        invalid_values = {"", "none", "nan", "n/a", "null", "not available", "not specified"}
+        title_invalid = title.lower() in invalid_values
+        company_invalid = company.lower() in invalid_values
+
+        return not (title_invalid and company_invalid)
+
+    # Filter out invalid rows
+    valid_jobs_df = filtered_jobs_df[filtered_jobs_df.apply(is_valid_job_row, axis=1)].copy()
+    filtered_jobs_df = valid_jobs_df
+
     # Show filter summary
     if len(filtered_jobs_df) != len(jobs_df):
         st.info(f"🎯 Filters applied: {len(filtered_jobs_df)} of {len(jobs_df)} jobs are visible")
