@@ -8,7 +8,7 @@ It provides fallback defaults and type validation for all configuration options.
 import logging
 import os
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Optional
 
 # Set up logging for configuration loading
 logger = logging.getLogger(__name__)
@@ -31,25 +31,6 @@ class CircuitBreakerConfig:
             raise ValueError("Circuit breaker threshold must be at least 1")
         if self.timeout < 1:
             raise ValueError("Circuit breaker timeout must be at least 1 second")
-
-
-@dataclass
-class RateLimitConfig:
-    """
-    Rate Limiter Configuration
-
-    This dataclass holds all rate limiting settings.
-    """
-
-    base_delay: float
-    max_delay: float
-
-    def __post_init__(self) -> None:
-        """Validate configuration after initialization"""
-        if self.base_delay < 0:
-            raise ValueError("Base delay must be non-negative")
-        if self.max_delay < self.base_delay:
-            raise ValueError("Max delay must be greater than base delay")
 
 
 @dataclass
@@ -102,6 +83,26 @@ class ThreadingConfig:
             raise ValueError("Timeout per country must be at least 1 second")
 
 
+@dataclass
+class CacheConfig:
+    """
+    Cache Configuration
+
+    This dataclass holds cache-specific settings for Redis caching strategy.
+    Uses the existing Redis TTL setting directly in seconds (no conversion needed).
+    Cache is always enabled when Redis is available (keep it simple).
+    """
+
+    ttl_seconds: int
+
+    def __post_init__(self) -> None:
+        """Validate configuration after initialization"""
+        if self.ttl_seconds < 1:  # Minimum 1 second
+            raise ValueError("Cache TTL must be at least 1 second")
+        if self.ttl_seconds > 86400:  # 24 hours in seconds
+            raise ValueError("Cache TTL cannot exceed 86400 seconds (24 hours)")
+
+
 class EnvironmentManager:
     """
     Environment Variable Manager
@@ -113,9 +114,9 @@ class EnvironmentManager:
     def __init__(self) -> None:
         """Initialize the environment manager and load all configurations"""
         self._circuit_breaker_config: Optional[CircuitBreakerConfig] = None
-        self._rate_limit_config: Optional[RateLimitConfig] = None
         self._redis_config: Optional[RedisConfig] = None
         self._threading_config: Optional[ThreadingConfig] = None
+        self._cache_config: Optional[CacheConfig] = None
         self._load_configurations()
 
     def _load_configurations(self) -> None:
@@ -125,9 +126,9 @@ class EnvironmentManager:
         try:
 
             self._circuit_breaker_config = self._load_circuit_breaker_config()
-            self._rate_limit_config = self._load_rate_limit_config()
             self._redis_config = self._load_redis_config()
             self._threading_config = self._load_threading_config()
+            self._cache_config = self._load_cache_config()
 
             logger.info("Environment configurations loaded successfully")
 
@@ -135,16 +136,16 @@ class EnvironmentManager:
             logger.error(f"Failed to load environment configurations: {e}")
             # Use safe defaults if configuration fails
             self._circuit_breaker_config = CircuitBreakerConfig(threshold=5, timeout=300)
-            self._rate_limit_config = RateLimitConfig(base_delay=2.0, max_delay=60.0)
             self._redis_config = RedisConfig(
-                url=REDIS_DEFAULTS["url"],
-                ttl=REDIS_DEFAULTS["ttl"],
-                max_connections=REDIS_DEFAULTS["max_connections"],
-                retry_attempts=REDIS_DEFAULTS["retry_attempts"],
-                retry_delay=REDIS_DEFAULTS["retry_delay"],
-                health_check_interval=REDIS_DEFAULTS["health_check_interval"],
+                url="redis://localhost:6379",
+                ttl=3600,
+                max_connections=10,
+                retry_attempts=3,
+                retry_delay=1.0,
+                health_check_interval=30,
             )
             self._threading_config = ThreadingConfig(max_workers=4, timeout_per_country=30)
+            self._cache_config = CacheConfig(ttl_seconds=3600)  # 1 hour default
 
     def _load_circuit_breaker_config(self) -> CircuitBreakerConfig:
         """
@@ -161,21 +162,6 @@ class EnvironmentManager:
 
         return CircuitBreakerConfig(threshold=threshold, timeout=timeout)
 
-    def _load_rate_limit_config(self) -> RateLimitConfig:
-        """
-        Load rate limiting configuration from environment variables
-
-        Returns:
-            RateLimitConfig: Validated configuration object
-        """
-        # Get environment variables with fallback defaults
-        base_delay = self._get_env_float("RATE_LIMITER_BASE_DELAY", default=2.0)
-        max_delay = self._get_env_float("RATE_LIMITER_MAX_DELAY", default=60.0)
-
-        logger.debug(f"Rate limiter config - base_delay: {base_delay}s, max_delay: {max_delay}s")
-
-        return RateLimitConfig(base_delay=base_delay, max_delay=max_delay)
-
     def _load_redis_config(self) -> RedisConfig:
         """
         Load Redis configuration from environment variables
@@ -184,14 +170,12 @@ class EnvironmentManager:
             RedisConfig: Validated configuration object
         """
         # Get environment variables with fallback defaults
-        url = os.getenv("REDIS_URL", REDIS_DEFAULTS["url"])
-        ttl = self._get_env_int("REDIS_TTL", default=REDIS_DEFAULTS["ttl"])
-        max_connections = self._get_env_int("REDIS_MAX_CONNECTIONS", default=REDIS_DEFAULTS["max_connections"])
-        retry_attempts = self._get_env_int("REDIS_RETRY_ATTEMPTS", default=REDIS_DEFAULTS["retry_attempts"])
-        retry_delay = self._get_env_float("REDIS_RETRY_DELAY", default=REDIS_DEFAULTS["retry_delay"])
-        health_check_interval = self._get_env_int(
-            "REDIS_HEALTH_CHECK_INTERVAL", default=REDIS_DEFAULTS["health_check_interval"]
-        )
+        url = os.getenv("REDIS_URL", "redis://localhost:6379")
+        ttl = self._get_env_int("REDIS_TTL", default=3600)
+        max_connections = self._get_env_int("REDIS_MAX_CONNECTIONS", default=10)
+        retry_attempts = self._get_env_int("REDIS_RETRY_ATTEMPTS", default=3)
+        retry_delay = self._get_env_float("REDIS_RETRY_DELAY", default=1.0)
+        health_check_interval = self._get_env_int("REDIS_HEALTH_CHECK_INTERVAL", default=30)
 
         logger.debug(f"Redis config - url: {url}, ttl: {ttl}s, max_connections: {max_connections}")
 
@@ -218,6 +202,23 @@ class EnvironmentManager:
         logger.debug(f"Threading config - max_workers: {max_workers}, timeout_per_country: {timeout_per_country}s")
 
         return ThreadingConfig(max_workers=max_workers, timeout_per_country=timeout_per_country)
+
+    def _load_cache_config(self) -> CacheConfig:
+        """
+        Load cache configuration from environment variables
+
+        Uses the existing REDIS_TTL setting directly in seconds (no conversion).
+        Cache is always enabled when Redis is available (simple strategy).
+
+        Returns:
+            CacheConfig: Validated configuration object
+        """
+        # Use existing Redis TTL setting directly (no conversion needed)
+        ttl_seconds = self._get_env_int("REDIS_TTL", default=3600)
+
+        logger.debug(f"Cache config - ttl_seconds: {ttl_seconds}s (from REDIS_TTL)")
+
+        return CacheConfig(ttl_seconds=ttl_seconds)
 
     def _get_env_float(self, key: str, default: float) -> float:
         """
@@ -289,19 +290,6 @@ class EnvironmentManager:
         return self._circuit_breaker_config
 
     @property
-    def rate_limit(self) -> RateLimitConfig:
-        """
-        Get rate limiting configuration
-
-        Returns:
-            RateLimitConfig: Current rate limiting settings
-        """
-        if self._rate_limit_config is None:
-            # Fallback to defaults if not loaded
-            self._rate_limit_config = RateLimitConfig(base_delay=2.0, max_delay=60.0)
-        return self._rate_limit_config
-
-    @property
     def redis(self) -> RedisConfig:
         """
         Get Redis configuration
@@ -312,12 +300,12 @@ class EnvironmentManager:
         if self._redis_config is None:
             # Fallback to defaults if not loaded
             self._redis_config = RedisConfig(
-                url=REDIS_DEFAULTS["url"],
-                ttl=REDIS_DEFAULTS["ttl"],
-                max_connections=REDIS_DEFAULTS["max_connections"],
-                retry_attempts=REDIS_DEFAULTS["retry_attempts"],
-                retry_delay=REDIS_DEFAULTS["retry_delay"],
-                health_check_interval=REDIS_DEFAULTS["health_check_interval"],
+                url="redis://localhost:6379",
+                ttl=3600,
+                max_connections=10,
+                retry_attempts=3,
+                retry_delay=1.0,
+                health_check_interval=30,
             )
         return self._redis_config
 
@@ -334,16 +322,19 @@ class EnvironmentManager:
             self._threading_config = ThreadingConfig(max_workers=4, timeout_per_country=30)
         return self._threading_config
 
+    @property
+    def cache(self) -> CacheConfig:
+        """
+        Get cache configuration
 
-# Default configuration values
-REDIS_DEFAULTS: dict[str, Any] = {
-    "url": "redis://localhost:6379",
-    "ttl": 3600,
-    "max_connections": 10,
-    "retry_attempts": 3,
-    "retry_delay": 1.0,
-    "health_check_interval": 30,
-}
+        Returns:
+            CacheConfig: Current cache settings
+        """
+        if self._cache_config is None:
+            # Fallback to defaults if not loaded
+            self._cache_config = CacheConfig(ttl_seconds=3600)  # 1 hour default
+        return self._cache_config
+
 
 # Global environment manager instance
 # This is like a singleton service in Angular or a global context in React
@@ -373,16 +364,6 @@ def get_circuit_breaker_config() -> CircuitBreakerConfig:
     return get_environment_manager().circuit_breaker
 
 
-def get_rate_limit_config() -> RateLimitConfig:
-    """
-    Convenience function to get rate limiting configuration
-
-    Returns:
-        RateLimitConfig: Current rate limiting settings
-    """
-    return get_environment_manager().rate_limit
-
-
 def get_redis_config() -> RedisConfig:
     """
     Convenience function to get Redis configuration
@@ -401,3 +382,13 @@ def get_threading_config() -> ThreadingConfig:
         ThreadingConfig: Current threading settings
     """
     return get_environment_manager().threading
+
+
+def get_cache_config() -> CacheConfig:
+    """
+    Convenience function to get cache configuration
+
+    Returns:
+        CacheConfig: Current cache settings
+    """
+    return get_environment_manager().cache

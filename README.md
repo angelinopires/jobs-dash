@@ -14,6 +14,12 @@ A powerful, real-time job scraping dashboard built with **Streamlit** and **jobs
 - **Python 3.8+**: Core programming language
 - **Session State**: Persistent data management
 
+### **Caching & Performance**
+- **Redis**: High-performance caching and data storage
+- **TTL Management**: Automatic cache expiration (configurable)
+- **Circuit Breaker**: Resilient error handling
+- **Connection Pooling**: Optimized Redis connections
+
 ## 🚀 Quick Start
 
 ### **Basic Setup**
@@ -26,6 +32,15 @@ pip install -r requirements.txt
 streamlit run dashboard.py
 ```
 
+### **Redis Setup**
+```bash
+# Start Redis using Docker Compose
+docker-compose up -d redis
+
+# Or install locally
+sudo apt-get install redis-server
+```
+
 ### **Development Setup** (with code quality tools)
 ```bash
 pip install -e .[dev]     # Install Black, flake8, isort, mypy
@@ -33,12 +48,15 @@ pip install -e .[dev]     # Install Black, flake8, isort, mypy
 
 ## 🎯 Usage
 
-1. **Start the dashboard:**
-   ```bash
-   streamlit run dashboard.py
-   ```
+```bash
+docker-compose up -d redis
 
-2. **Open your browser** to `http://localhost:8501`
+# Start the dashboard
+source venv/bin/activate
+streamlit run dashboard.py
+```
+
+Open `http://localhost:8501` in your browser.
 
 ## 🧪 Testing
 
@@ -140,15 +158,14 @@ pytest -m "rate_limit"  # Rate limiting tests
 - **Glassdoor**: Company reviews and job listings
 - **ZipRecruiter**: AI-powered job matching
 
-## 🚀 Next Steps
-
+### **🔄 Next Steps**
 Move this repository to a more robust environment with background workers to enable:
 
-- [ ] **Smart caching** - Redis → File → API fallback strategy
 - [ ] **Analytics processing** - Daily → Weekly → Monthly aggregation
+- [ ] **Cache warming** - Pre-populate popular searches
+- [ ] **Multi-region Redis** - Global cache distribution
 - [ ] **Popular search updates** - Automatic trending job search updates
-- [ ] **Cache lifecycle management** - Automatic cleanup and optimization
-- [ ] **Scheduled maintenance** - Background file compression and cleanup
+- [ ] **Scheduled maintenance** - Background cache optimization
 
 
 ## 🤝 Contributing

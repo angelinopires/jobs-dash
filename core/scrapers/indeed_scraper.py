@@ -16,13 +16,14 @@ from typing import Any, Dict, List
 import pandas as pd
 from jobspy import scrape_jobs
 
-# Existing config imports
-from config.countries import get_indeed_country_name
-from config.remote_filters import get_global_countries
 from core.search.search_optimizer import SearchOptimizer
 
 # New core architecture imports
 from core.search.search_orchestrator import SearchOrchestrator
+
+# Existing config imports
+from data.countries import get_indeed_country_name
+from data.job_filters import get_global_countries
 from utils.constants import INVALID_VALUES
 
 # Import display functions for cleaning

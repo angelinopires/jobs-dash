@@ -109,7 +109,7 @@ class TestCountrySupport(unittest.TestCase):
 
     def setUp(self) -> None:
         """Set up test fixtures."""
-        from config.countries import get_country_options, get_indeed_country_name
+        from data.countries import get_country_options, get_indeed_country_name
 
         self.get_country_options = get_country_options
         self.get_indeed_country_name = get_indeed_country_name

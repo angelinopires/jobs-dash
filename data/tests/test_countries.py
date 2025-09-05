@@ -7,7 +7,7 @@ This module contains comprehensive tests for country configuration functions.
 import unittest
 
 # Import the functions being tested
-from config.countries import (
+from data.countries import (
     COUNTRIES,
     get_country_info,
     get_country_options,

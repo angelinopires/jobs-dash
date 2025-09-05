@@ -8,9 +8,9 @@ from typing import Any, Optional
 import pandas as pd
 import streamlit as st
 
-from config.countries import get_country_options
-from config.remote_filters import enhance_search_term_with_remote_keywords, get_global_countries_display
 from core.scrapers.indeed_scraper import get_indeed_scraper
+from data.countries import get_country_options
+from data.job_filters import enhance_search_term_with_remote_keywords, get_global_countries_display
 from utils.display_utils import clean_company_info, clean_display_value, format_posted_date_enhanced
 from utils.time_filters import get_time_filter_options
 from utils.toast import error_toast, warning_toast
@@ -820,5 +820,3 @@ def filter_by_salary_range(jobs_df: pd.DataFrame, salary_range: str) -> pd.DataF
 
 if __name__ == "__main__":
     main()
-# Test comment for pre-commit
-# Test formatting consistency

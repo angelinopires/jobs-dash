@@ -17,6 +17,8 @@ from urllib.parse import urlparse
 import redis
 from redis.exceptions import AuthenticationError, ConnectionError, RedisError, TimeoutError
 
+from settings.environment import get_redis_config
+
 logger = logging.getLogger(__name__)
 
 
@@ -31,27 +33,29 @@ class RedisManager:
 
     def __init__(
         self,
-        redis_url: str = "redis://localhost:6379",
-        max_connections: int = 10,
-        retry_attempts: int = 3,
-        retry_delay: float = 1.0,
-        health_check_interval: int = 30,
+        redis_url: Optional[str] = None,
+        max_connections: Optional[int] = None,
+        retry_attempts: Optional[int] = None,
+        retry_delay: Optional[float] = None,
+        health_check_interval: Optional[int] = None,
     ) -> None:
         """
         Initialize Redis manager with connection settings
 
         Args:
-            redis_url: Redis connection URL (default: localhost:6379)
-            max_connections: Maximum number of connections in pool
-            retry_attempts: Number of retry attempts for failed operations
-            retry_delay: Delay between retry attempts in seconds
-            health_check_interval: Health check interval in seconds
+            redis_url: Redis connection URL (uses environment config if None)
+            max_connections: Maximum number of connections in pool (uses environment config if None)
+            retry_attempts: Number of retry attempts for failed operations (uses environment config if None)
+            retry_delay: Delay between retry attempts in seconds (uses environment config if None)
+            health_check_interval: Health check interval in seconds (uses environment config if None)
         """
-        self.redis_url = redis_url
-        self.max_connections = max_connections
-        self.retry_attempts = retry_attempts
-        self.retry_delay = retry_delay
-        self.health_check_interval = health_check_interval
+        # Get configuration from environment with optional overrides
+        redis_config = get_redis_config()
+        self.redis_url = redis_url or redis_config.url
+        self.max_connections = max_connections or redis_config.max_connections
+        self.retry_attempts = retry_attempts or redis_config.retry_attempts
+        self.retry_delay = retry_delay or redis_config.retry_delay
+        self.health_check_interval = health_check_interval or redis_config.health_check_interval
 
         # Connection state
         self._redis_client: Optional[redis.Redis] = None

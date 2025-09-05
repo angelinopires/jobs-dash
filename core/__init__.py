@@ -6,9 +6,9 @@ monitoring, scraping, and resilience mechanisms.
 """
 
 # Import from submodules
-from .cache import CacheKeyGenerator, CacheManager, FileCacheManager, GlobalCacheManager
+from .cache import CacheKeyGenerator
 from .monitoring import PerformanceMonitor, SearchAnalytics
-from .redis import RedisManager
+from .redis import RedisCacheManager, RedisManager
 from .resilience import (
     CircuitBreaker,
     CircuitOpenException,
@@ -26,11 +26,9 @@ from .search import SearchOptimizer, SearchOrchestrator, SearchResult, SearchTas
 __all__ = [
     # Cache
     "CacheKeyGenerator",
-    "CacheManager",
-    "FileCacheManager",
-    "GlobalCacheManager",
     # Redis
     "RedisManager",
+    "RedisCacheManager",
     # Monitoring
     "PerformanceMonitor",
     "SearchAnalytics",

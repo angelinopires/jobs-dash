@@ -11,7 +11,7 @@ import unittest
 from typing import Any, List
 from unittest.mock import patch
 
-from config.environment import CircuitBreakerConfig
+from settings.environment import CircuitBreakerConfig
 
 from ..circuit_breaker import (
     CircuitBreaker,

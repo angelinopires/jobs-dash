@@ -12,8 +12,8 @@ from typing import Any, Callable, Dict, List, Optional
 
 import pandas as pd
 
-from ..cache.cache_manager import CacheManager
 from ..monitoring.performance_monitor import PerformanceMonitor
+from ..redis.redis_cache_manager import RedisCacheManager
 from ..resilience.circuit_breaker import CircuitOpenException, get_circuit_breaker
 from ..resilience.rate_limiter import get_rate_limiter
 from .threading_manager import ThreadingManager
@@ -34,7 +34,7 @@ class SearchOrchestrator(ABC):
     def __init__(self, scraper_name: str) -> None:
         self.scraper_name = scraper_name
         self.performance_monitor = PerformanceMonitor(scraper_name)
-        self.cache_manager = CacheManager()
+        self.cache_manager = RedisCacheManager()
         self.threading_manager = ThreadingManager()
         self.last_search_time = 0.0
         self.min_delay = 1.0  # Minimum delay between API calls
@@ -177,24 +177,34 @@ class SearchOrchestrator(ABC):
         # Filter out function references from kwargs to avoid JSON serialization issues
         filtered_kwargs = {k: v for k, v in kwargs.items() if not callable(v)}
 
-        # Check cache first
-        cache_key = self.cache_manager.generate_cache_key(
+        # Check Redis cache first (RedisCacheManager generates keys internally)
+        cached_result = self.cache_manager.get_cached_result(
             scraper=self.scraper_name,
             search_term=search_term,
             country=country,
-            include_remote=include_remote,
+            remote=include_remote,
             **filtered_kwargs,
         )
-
-        cached_result = self.cache_manager.get_cached_result(cache_key)
         if cached_result:
-            # Get cache entry for expiration info
-            cache_entry = self.cache_manager.get_cache_entry_info(cache_key)
-            self.performance_monitor.log_cache_event("hit", cache_key, country, cache_entry)
-            return cached_result
+            # Create cache info for performance monitoring (Redis doesn't expose cache entry details)
+            cache_info = {"source": "redis", "hit": True}
+            cache_key_for_logging = f"{self.scraper_name}_{search_term}_{country}"
+            self.performance_monitor.log_cache_event("hit", cache_key_for_logging, country, cache_info)
+
+            # Convert cached result to expected format (list of jobs -> DataFrame)
+            jobs_df = pd.DataFrame(cached_result)
+            return {
+                "success": True,
+                "jobs": jobs_df,
+                "count": len(cached_result),
+                "search_time": 0.0,  # Cache hit has minimal time
+                "message": f"Found {len(cached_result)} jobs (cached)",
+                "metadata": {"source": "cache", "cache_hit": True},
+            }
 
         # No cache hit - perform actual search
-        self.performance_monitor.log_cache_event("miss", cache_key, country)
+        cache_key_for_logging = f"{self.scraper_name}_{search_term}_{country}"
+        self.performance_monitor.log_cache_event("miss", cache_key_for_logging, country)
 
         # Rate limiting
         self._apply_rate_limiting()
@@ -235,8 +245,19 @@ class SearchOrchestrator(ABC):
                 "metadata": {"country": country, "api_time": api_time, "scraper": self.scraper_name},
             }
 
-        # Cache the result
-        self.cache_manager.cache_result(cache_key, result)
+        # Cache the result in Redis (only cache successful results with jobs)
+        jobs_data = result.get("jobs")
+        if result.get("success") and jobs_data is not None and not jobs_data.empty:
+            # Convert DataFrame to list of dicts for Redis storage
+            jobs_list = jobs_data.to_dict("records") if hasattr(jobs_data, "to_dict") else jobs_data
+            self.cache_manager.cache_result(
+                scraper=self.scraper_name,
+                search_term=search_term,
+                country=country,
+                result=jobs_list,  # RedisCacheManager expects list of job dicts
+                remote=include_remote,
+                **filtered_kwargs,
+            )
 
         return result
 
@@ -344,9 +365,9 @@ class SearchOrchestrator(ABC):
         """Get threading-specific performance statistics."""
         return self.threading_manager.get_performance_stats()
 
-    def clear_cache(self) -> None:
+    def clear_cache(self) -> int:
         """Clear all cached results for this scraper."""
-        self.cache_manager.clear_scraper_cache(self.scraper_name)
+        return self.cache_manager.clear_scraper_cache(self.scraper_name)
 
     def get_circuit_breaker_status(self) -> Dict[str, Any]:
         """
