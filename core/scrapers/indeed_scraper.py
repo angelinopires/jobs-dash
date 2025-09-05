@@ -1,7 +1,7 @@
 """
-Optimized Indeed scraper using the new core architecture.
+Indeed scraper using the new core architecture.
 
-This replaces the old indeed_scraper.py with a version that leverages:
+This scraper leverages:
 - Smart caching system
 - Performance monitoring
 - Optimization framework
@@ -19,10 +19,10 @@ from jobspy import scrape_jobs
 # Existing config imports
 from config.countries import get_indeed_country_name
 from config.remote_filters import get_global_countries
-from core.base_optimizer import SearchOptimizer
+from core.search.search_optimizer import SearchOptimizer
 
 # New core architecture imports
-from core.base_scraper import BaseScraper
+from core.search.search_orchestrator import SearchOrchestrator
 from utils.constants import INVALID_VALUES
 
 # Import display functions for cleaning
@@ -30,7 +30,7 @@ from utils.display_utils import clean_display_value
 from utils.time_filters import get_hours_from_filter
 
 
-class OptimizedIndeedScraper(BaseScraper):
+class IndeedScraper(SearchOrchestrator):
     """
     Indeed scraper with full optimization framework.
 
@@ -474,6 +474,6 @@ class OptimizedIndeedScraper(BaseScraper):
 
 
 # Create a function to get the scraper instance (maintains compatibility)
-def get_indeed_scraper() -> OptimizedIndeedScraper:
-    """Get an optimized Indeed scraper instance."""
-    return OptimizedIndeedScraper()
+def get_indeed_scraper() -> IndeedScraper:
+    """Get an Indeed scraper instance."""
+    return IndeedScraper()

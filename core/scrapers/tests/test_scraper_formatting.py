@@ -11,7 +11,7 @@ from typing import Any, Dict
 import numpy as np
 import pandas as pd
 
-from scrapers.optimized_indeed_scraper import get_indeed_scraper
+from core.scrapers.indeed_scraper import get_indeed_scraper
 
 # Add the parent directory to sys.path to import scraper classes
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

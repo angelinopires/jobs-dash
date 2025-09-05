@@ -12,8 +12,9 @@ from unittest.mock import MagicMock, patch
 from redis.exceptions import ConnectionError, TimeoutError
 
 from config.environment import RedisConfig
-from core.global_cache_manager import GlobalCacheManager
-from core.redis_manager import RedisManager
+
+from ...redis.redis_manager import RedisManager
+from ..global_cache_manager import GlobalCacheManager
 
 
 class TestRedisManager(unittest.TestCase):

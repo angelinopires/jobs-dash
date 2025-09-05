@@ -15,11 +15,10 @@ import unittest
 
 import pandas as pd
 
-from core.base_optimizer import SearchOptimizer
-
 # Import the core modules to test
-from core.cache_manager import CacheManager
-from core.performance_monitor import PerformanceMonitor
+from core.cache.cache_manager import CacheManager
+from core.monitoring.performance_monitor import PerformanceMonitor
+from core.search.search_optimizer import SearchOptimizer
 
 
 class TestCacheManager(unittest.TestCase):

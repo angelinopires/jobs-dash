@@ -9,9 +9,10 @@ from unittest.mock import MagicMock, patch
 
 import pandas as pd
 
+from core.scrapers.indeed_scraper import IndeedScraper, get_indeed_scraper
+
 # Import the scrapers
-from core.base_scraper import BaseScraper
-from scrapers.optimized_indeed_scraper import OptimizedIndeedScraper, get_indeed_scraper
+from core.search.search_orchestrator import SearchOrchestrator
 
 
 class TestIndeedScraperInheritance(unittest.TestCase):
@@ -22,9 +23,9 @@ class TestIndeedScraperInheritance(unittest.TestCase):
         self.scraper = get_indeed_scraper()
 
     def test_inheritance(self) -> None:
-        """Test that IndeedScraper inherits from BaseScraper."""
-        self.assertIsInstance(self.scraper, BaseScraper)
-        self.assertIsInstance(self.scraper, OptimizedIndeedScraper)
+        """Test that IndeedScraper inherits from SearchOrchestrator."""
+        self.assertIsInstance(self.scraper, SearchOrchestrator)
+        self.assertIsInstance(self.scraper, IndeedScraper)
 
     def test_abstract_methods_implemented(self) -> None:
         """Test that all abstract methods are implemented."""
@@ -115,7 +116,7 @@ class TestIndeedScraperAPI(unittest.TestCase):
         # Should NOT include job_type (JobSpy limitation)
         self.assertNotIn("job_type", params)
 
-    @patch("scrapers.optimized_indeed_scraper.scrape_jobs")
+    @patch("core.scrapers.indeed_scraper.scrape_jobs")
     def test_call_scraping_api_success(self, mock_scrape_jobs: MagicMock) -> None:
         """Test successful API call."""
         # Mock successful response
@@ -141,7 +142,7 @@ class TestIndeedScraperAPI(unittest.TestCase):
         self.assertEqual(len(result), 1)
         self.assertEqual(result.iloc[0]["title"], "Python Developer")
 
-    @patch("scrapers.optimized_indeed_scraper.scrape_jobs")
+    @patch("core.scrapers.indeed_scraper.scrape_jobs")
     def test_call_scraping_api_failure(self, mock_scrape_jobs: MagicMock) -> None:
         """Test API call failure handling."""
         # Mock API failure
@@ -162,7 +163,7 @@ class TestIndeedScraperSearchTime(unittest.TestCase):
         """Set up test fixtures."""
         self.scraper = get_indeed_scraper()
 
-    @patch("scrapers.optimized_indeed_scraper.scrape_jobs")
+    @patch("core.scrapers.indeed_scraper.scrape_jobs")
     def test_single_country_search_includes_search_time(self, mock_scrape_jobs: MagicMock) -> None:
         """Test that single country search includes search_time."""
         # Mock empty response
@@ -195,8 +196,8 @@ class TestIndeedScraperSearchTime(unittest.TestCase):
         self.assertIsInstance(result["search_time"], (int, float))
         self.assertGreaterEqual(result["search_time"], 0)
 
-    @patch("scrapers.optimized_indeed_scraper.get_global_countries")
-    @patch.object(BaseScraper, "search_jobs")
+    @patch("core.scrapers.indeed_scraper.get_global_countries")
+    @patch.object(SearchOrchestrator, "search_jobs")
     def test_global_search_empty_results_includes_search_time(
         self, mock_base_search: MagicMock, mock_global_countries: MagicMock
     ) -> None:
@@ -212,8 +213,8 @@ class TestIndeedScraperSearchTime(unittest.TestCase):
         self.assertIsInstance(result["search_time"], (int, float))
         self.assertGreaterEqual(result["search_time"], 0)
 
-    @patch("scrapers.optimized_indeed_scraper.get_global_countries")
-    @patch.object(BaseScraper, "search_jobs")
+    @patch("core.scrapers.indeed_scraper.get_global_countries")
+    @patch.object(SearchOrchestrator, "search_jobs")
     def test_global_search_with_results_includes_search_time(
         self, mock_base_search: MagicMock, mock_global_countries: MagicMock
     ) -> None:
@@ -350,7 +351,7 @@ class TestIndeedScraperIntegration(unittest.TestCase):
         """Set up test fixtures."""
         self.scraper = get_indeed_scraper()
 
-    @patch("scrapers.optimized_indeed_scraper.scrape_jobs")
+    @patch("core.scrapers.indeed_scraper.scrape_jobs")
     def test_end_to_end_search_result_format(self, mock_scrape_jobs: MagicMock) -> None:
         """Test that the complete search result has the expected format."""
         # Mock JobSpy response

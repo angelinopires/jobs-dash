@@ -16,9 +16,10 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from config.environment import get_redis_config
-from core.redis_manager import RedisManager
-from core.search_analytics import SearchAnalytics
 from utils.file_operations import AtomicFileOperations
+
+from ..monitoring.search_analytics import SearchAnalytics
+from ..redis.redis_manager import RedisManager
 
 logger = logging.getLogger(__name__)
 

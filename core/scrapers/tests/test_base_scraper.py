@@ -11,7 +11,7 @@ from typing import Any, Dict
 import pandas as pd
 
 # Import the base scraper
-from scrapers.base_scraper import BaseJobScraper, FilterCapabilities
+from core.scrapers.base_scraper import BaseJobScraper, FilterCapabilities
 
 
 class TestFilterCapabilities(unittest.TestCase):

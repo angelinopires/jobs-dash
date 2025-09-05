@@ -12,7 +12,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from scrapers.optimized_indeed_scraper import get_indeed_scraper
+from core.scrapers.indeed_scraper import get_indeed_scraper
 from utils.display_utils import clean_company_info, clean_display_value, format_posted_date_enhanced
 
 # Add the parent directory to sys.path
@@ -30,7 +30,7 @@ class TestNanPreventionSuite(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         """Set up test fixtures for the class."""
-        from scrapers.optimized_indeed_scraper import get_indeed_scraper
+        from core.scrapers.indeed_scraper import get_indeed_scraper
 
         cls.scraper = get_indeed_scraper()
 

@@ -10,7 +10,7 @@ import streamlit as st
 
 from config.countries import get_country_options
 from config.remote_filters import enhance_search_term_with_remote_keywords, get_global_countries_display
-from scrapers.optimized_indeed_scraper import get_indeed_scraper
+from core.scrapers.indeed_scraper import get_indeed_scraper
 from utils.display_utils import clean_company_info, clean_display_value, format_posted_date_enhanced
 from utils.time_filters import get_time_filter_options
 from utils.toast import error_toast, warning_toast

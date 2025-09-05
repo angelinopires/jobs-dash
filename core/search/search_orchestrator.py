@@ -1,8 +1,9 @@
 """
-Abstract base scraper class with standardized optimization interface.
+Search orchestrator for job search infrastructure.
 
-This replaces the old scrapers/base_scraper.py with a cleaner architecture
-that separates core functionality from scraper-specific implementations.
+This module provides the main search orchestration functionality that coordinates
+job searches across multiple countries and job boards, with built-in optimizations,
+caching, monitoring, and resilience mechanisms.
 """
 
 import time
@@ -11,19 +12,20 @@ from typing import Any, Callable, Dict, List, Optional
 
 import pandas as pd
 
-from .cache_manager import CacheManager
-from .circuit_breaker import CircuitOpenException, get_circuit_breaker
-from .performance_monitor import PerformanceMonitor
-from .rate_limiter import get_rate_limiter
+from ..cache.cache_manager import CacheManager
+from ..monitoring.performance_monitor import PerformanceMonitor
+from ..resilience.circuit_breaker import CircuitOpenException, get_circuit_breaker
+from ..resilience.rate_limiter import get_rate_limiter
 from .threading_manager import ThreadingManager
 
 
-class BaseScraper(ABC):
+class SearchOrchestrator(ABC):
     """
-    Enhanced base class for all job scrapers with built-in optimizations.
+    Search orchestrator for job search infrastructure with built-in optimizations.
 
     This class provides:
-    - Standardized caching across all scrapers
+    - Search coordination across multiple countries and job boards
+    - Standardized caching across all searches
     - Performance monitoring and logging
     - Parallel result processing capabilities
     - Common error handling and fallback strategies

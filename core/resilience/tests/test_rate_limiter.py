@@ -11,7 +11,7 @@ This module tests the intelligent rate limiter to ensure proper:
 
 import unittest
 
-from core.rate_limiter import EndpointStats, IntelligentRateLimiter, RateLimitConfig, RateLimitState
+from ..rate_limiter import EndpointStats, IntelligentRateLimiter, RateLimitConfig, RateLimitState
 
 
 class TestRateLimitConfig(unittest.TestCase):

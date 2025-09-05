@@ -15,7 +15,7 @@ from unittest.mock import Mock
 
 import pandas as pd
 
-from core.threading_manager import SearchResult, SearchTask, ThreadingManager
+from ..threading_manager import SearchResult, SearchTask, ThreadingManager
 
 
 class TestThreadingManager(unittest.TestCase):

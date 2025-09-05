@@ -12,7 +12,7 @@ from unittest.mock import MagicMock, patch
 
 import pandas as pd
 
-from scrapers.optimized_indeed_scraper import get_indeed_scraper
+from core.scrapers.indeed_scraper import get_indeed_scraper
 
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -32,7 +32,7 @@ class TestScraperCore(unittest.TestCase):
         self.assertTrue(hasattr(self.scraper, "search_jobs"))
         self.assertTrue(hasattr(self.scraper, "_process_jobs"))
 
-    @patch("scrapers.optimized_indeed_scraper.OptimizedIndeedScraper.search_jobs")
+    @patch("core.scrapers.indeed_scraper.IndeedScraper.search_jobs")
     def test_search_jobs_interface(self, mock_search: MagicMock) -> None:
         """Test the main search_jobs interface."""
         # Mock successful search

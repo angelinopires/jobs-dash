@@ -12,7 +12,8 @@ from typing import Any, List
 from unittest.mock import patch
 
 from config.environment import CircuitBreakerConfig
-from core.circuit_breaker import (
+
+from ..circuit_breaker import (
     CircuitBreaker,
     CircuitOpenException,
     CircuitState,

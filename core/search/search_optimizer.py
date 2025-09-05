@@ -1,21 +1,21 @@
 """
-Base optimization framework for job scrapers.
+Search optimization framework for job search infrastructure.
 
-This module provides common optimization patterns that can be applied
-across different scrapers, preparing for future parallel processing
-and multi-scraper coordination.
+This module provides optimization patterns for job searches, including
+result processing optimization, memory management, and performance
+improvements for parallel search operations.
 """
 
 import time
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Dict, List
+from typing import Any, Dict, List
 
 import pandas as pd
 
 
-class BaseOptimizer(ABC):
+class BaseSearchOptimizer(ABC):
     """
-    Abstract base class for scraper optimizations.
+    Abstract base class for search optimizations.
 
     This class defines common optimization patterns:
     - Result processing optimization
@@ -37,33 +37,6 @@ class BaseOptimizer(ABC):
     def optimize_result_processing(self, jobs_df: pd.DataFrame) -> pd.DataFrame:
         """Optimize job result processing."""
         pass
-
-    def prepare_for_parallel_processing(
-        self, countries: List[str], search_function: Callable, max_workers: int = 4
-    ) -> Dict[str, Any]:
-        """
-        Prepare search operations for parallel execution.
-
-        This method sets up the framework for parallel processing
-        across multiple countries (Phase 3 implementation).
-
-        Args:
-            countries: List of countries to search
-            search_function: Function to call for each country
-            max_workers: Maximum number of parallel workers
-
-        Returns:
-            Configuration dict for parallel execution
-        """
-
-        return {
-            "execution_mode": "parallel",
-            "countries": countries,
-            "search_function": search_function,
-            "max_workers": min(max_workers, len(countries)),
-            "batch_size": max(1, len(countries) // max_workers),
-            "optimization_ready": True,
-        }
 
     def optimize_memory_usage(self, jobs_list: List[pd.DataFrame]) -> pd.DataFrame:
         """
@@ -163,23 +136,13 @@ class BaseOptimizer(ABC):
 
         return deduped_df
 
-    def get_optimization_stats(self) -> Dict[str, Any]:
-        """Get statistics about optimizations applied."""
-        return {
-            "scraper": self.scraper_name,
-            **self.optimization_stats,
-            "avg_optimization_time": (
-                self.optimization_stats["time_saved"] / max(self.optimization_stats["optimizations_applied"], 1)
-            ),
-        }
 
-
-class SearchOptimizer(BaseOptimizer):
+class SearchOptimizer(BaseSearchOptimizer):
     """
     Concrete implementation of search optimizations.
 
     This class implements the optimization methods for job searching,
-    focusing on performance improvements that work across all scrapers.
+    focusing on performance improvements that work across all search operations.
     """
 
     def optimize_search_params(self, **params: Any) -> Dict[str, Any]:
