@@ -2,54 +2,17 @@
 Unit tests for core optimization features.
 
 Tests the essential functionality of the new architecture:
-- Cache management (session + file backup)
 - Performance monitoring
 - Search optimization
 - Result processing
 """
 
-import shutil
-import tempfile
 import unittest
 
 import pandas as pd
 
 from core.monitoring.performance_monitor import PerformanceMonitor
-
-# Import the core modules to test
-from core.redis.redis_cache_manager import RedisCacheManager
 from core.search.search_optimizer import SearchOptimizer
-
-
-class TestCacheManager(unittest.TestCase):
-    """Test the Redis caching system."""
-
-    def setUp(self) -> None:
-        """Set up test environment with Redis cache manager."""
-        self.temp_dir = tempfile.mkdtemp()  # Keep for cleanup compatibility
-        self.cache_manager = RedisCacheManager(cache_ttl_seconds=60)  # Convert 1 minute to seconds
-
-    def tearDown(self) -> None:
-        """Clean up temporary files."""
-        shutil.rmtree(self.temp_dir)
-
-    def test_cache_key_generation(self) -> None:
-        """Test that cache keys are generated consistently."""
-        # Note: Cache key generation is now internal to RedisCacheManager
-        # Comprehensive cache tests are in core/redis/tests/test_redis_cache_manager.py
-        self.skipTest("Cache key generation moved to RedisCacheManager - see dedicated tests")
-
-    def test_cache_storage_and_retrieval(self) -> None:
-        """Test storing and retrieving cached results."""
-        # Note: Cache storage/retrieval functionality moved to RedisCacheManager
-        # Comprehensive cache tests are in core/redis/tests/test_redis_cache_manager.py
-        self.skipTest("Cache storage/retrieval moved to RedisCacheManager - see dedicated tests")
-
-    def test_cache_expiration(self) -> None:
-        """Test that cache entries expire after TTL."""
-        # Note: Cache expiration functionality moved to RedisCacheManager with TTL
-        # Comprehensive TTL tests are in core/redis/tests/test_redis_cache_manager.py
-        self.skipTest("Cache expiration moved to RedisCacheManager - see dedicated tests")
 
 
 class TestPerformanceMonitor(unittest.TestCase):
