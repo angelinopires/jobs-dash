@@ -229,7 +229,16 @@ class CacheKeyGenerator:
 
     def _normalize_posting_age(self, posting_age: str) -> str:
         """Normalize posting age filter."""
-        age_map = {"last 24h": "24h", "last 72h": "72h", "past week": "week", "past month": "month"}
+        # Map time filter options from utils/time_filters.py to normalized forms
+        age_map = {
+            "last 24h": "24h",
+            "last 72h": "72h",
+            "past week": "week",
+            "past month": "month",
+            # Handle variations that might be passed
+            "past 24 hours": "24h",
+            "past 72 hours": "72h",
+        }
         return age_map.get(posting_age.lower().strip(), "month")
 
     def _generate_hash(self, key_string: str) -> str:

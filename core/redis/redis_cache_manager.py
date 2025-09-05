@@ -77,9 +77,13 @@ class RedisCacheManager:
             return None
 
         try:
+            # Map time_filter to posting_age for cache key generation
+            cache_kwargs = kwargs.copy()
+            if "time_filter" in cache_kwargs:
+                cache_kwargs["posting_age"] = cache_kwargs.pop("time_filter")
             # Generate cache key
             cache_key = self.key_generator.generate_cache_key(
-                scraper=scraper, search_term=search_term, location=country, **kwargs
+                scraper=scraper, search_term=search_term, location=country, **cache_kwargs
             )
 
             # Try to get from Redis
@@ -126,9 +130,13 @@ class RedisCacheManager:
             return False
 
         try:
+            # Map time_filter to posting_age for cache key generation
+            cache_kwargs = kwargs.copy()
+            if "time_filter" in cache_kwargs:
+                cache_kwargs["posting_age"] = cache_kwargs.pop("time_filter")
             # Generate cache key
             cache_key = self.key_generator.generate_cache_key(
-                scraper=scraper, search_term=search_term, location=country, **kwargs
+                scraper=scraper, search_term=search_term, location=country, **cache_kwargs
             )
 
             # Store in Redis with TTL
