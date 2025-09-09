@@ -45,13 +45,13 @@ class RateLimitConfig:
     Think of it like a TypeScript interface for rate limiting props.
     """
 
-    base_delay: float = 1.5  # Base delay in seconds
-    max_delay: float = 10.0  # Maximum delay in seconds
-    jitter_factor: float = 0.2  # Jitter range (0.8-1.2x multiplier)
-    slow_response_threshold: float = 8.0  # Response time threshold for "slow" state
-    aggressive_response_threshold: float = 15.0  # Response time threshold for "aggressive" state
-    slow_multiplier: float = 1.2  # Delay multiplier when API is slow
-    aggressive_multiplier: float = 1.4  # Delay multiplier when API is very slow
+    base_delay: float = 1.0  # Base delay in seconds
+    max_delay: float = 5.0  # Maximum delay in seconds
+    jitter_factor: float = 0.1  # Jitter range (0.9-1.1x multiplier)
+    slow_response_threshold: float = 5.0  # Response time threshold for "slow" state
+    aggressive_response_threshold: float = 10.0  # Response time threshold for "aggressive" state
+    slow_multiplier: float = 1.1  # Delay multiplier when API is slow
+    aggressive_multiplier: float = 1.2  # Delay multiplier when API is very slow
 
     def __post_init__(self) -> None:
         """Validate configuration after initialization"""
@@ -170,7 +170,7 @@ class IntelligentRateLimiter:
         stats = self.get_endpoint_stats(endpoint)
 
         # Base delay with exponential backoff
-        base_delay = self.config.base_delay * (2 ** (attempt - 1))
+        base_delay = self.config.base_delay * (1.5 ** (attempt - 1))
         base_delay = min(base_delay, self.config.max_delay)
 
         # Apply state-based multiplier
@@ -183,6 +183,9 @@ class IntelligentRateLimiter:
         jitter_range = base_delay * self.config.jitter_factor
         jitter = random.uniform(-jitter_range, jitter_range)
         final_delay = max(0, base_delay + jitter)
+
+        # Cap the final delay to prevent excessive waiting
+        final_delay = min(final_delay, 10.0)  # Hard cap at 10 seconds
 
         logger.debug(
             f"Rate limit delay for {endpoint}: "
@@ -387,14 +390,7 @@ def get_rate_limiter(config: Optional[RateLimitConfig] = None) -> IntelligentRat
     global _rate_limiter
     if _rate_limiter is None or config is not None:
         if config is None:
-            # Import here to avoid circular imports
-            try:
-                from config.environment_manager import get_rate_limit_config
-
-                config = get_rate_limit_config()
-            except ImportError:
-                # Fallback to default if config module not available
-                config = RateLimitConfig()
+            config = RateLimitConfig()
         _rate_limiter = IntelligentRateLimiter(config)
     return _rate_limiter
 

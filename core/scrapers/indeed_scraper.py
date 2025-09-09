@@ -133,8 +133,8 @@ class IndeedScraper(SearchOrchestrator):
             # Make the API call
             jobs_df = scrape_jobs(**search_params)
 
-            # Record performance metrics
-            api_time = time.time() - api_start
+            # Record performance metrics (ensure non-negative)
+            api_time = max(0.0, time.time() - api_start)
 
             # Log API call completion
             site = "indeed"

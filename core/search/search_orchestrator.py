@@ -223,7 +223,7 @@ class SearchOrchestrator(ABC):
         # Call scraping API with circuit breaker protection
         start_time = time.time()
         jobs_df = self._call_scraping_api_with_circuit_breaker(api_params, country=country)
-        api_time = time.time() - start_time
+        api_time = max(0.0, time.time() - start_time)  # Ensure non-negative time
 
         # Process results
         if not jobs_df.empty:
@@ -233,6 +233,7 @@ class SearchOrchestrator(ABC):
                 "success": True,
                 "jobs": processed_jobs,
                 "count": len(processed_jobs),
+                "search_time": api_time,
                 "message": f"Found {len(processed_jobs)} jobs in {country}",
                 "metadata": {"country": country, "api_time": api_time, "scraper": self.scraper_name},
             }
@@ -241,6 +242,7 @@ class SearchOrchestrator(ABC):
                 "success": True,
                 "jobs": pd.DataFrame(),
                 "count": 0,
+                "search_time": api_time,
                 "message": f"No jobs found in {country}",
                 "metadata": {"country": country, "api_time": api_time, "scraper": self.scraper_name},
             }
@@ -265,7 +267,7 @@ class SearchOrchestrator(ABC):
         self, search_term: str, include_remote: bool, progress_callback: Optional[Callable], **kwargs: Any
     ) -> Dict[str, Any]:
         """
-        Phase 2: Parallel global search with ThreadPoolExecutor.
+        Parallel global search with ThreadPoolExecutor.
 
         Features:
         - Parallel processing across multiple countries

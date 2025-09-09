@@ -142,11 +142,11 @@ class EnvironmentManager:
             self._circuit_breaker_config = CircuitBreakerConfig()
             self._redis_config = RedisConfig(
                 url="redis://localhost:6379",
-                ttl=3600,
+                ttl=1800,
                 max_connections=10,
             )
             self._threading_config = ThreadingConfig(max_workers=4)
-            self._cache_config = CacheConfig(ttl_seconds=3600)  # 1 hour default
+            self._cache_config = CacheConfig(ttl_seconds=1800)  # 30min default
 
     def _load_circuit_breaker_config(self) -> CircuitBreakerConfig:
         """
@@ -167,8 +167,8 @@ class EnvironmentManager:
         """
         # Get environment variables with fallback defaults
         url = os.getenv("REDIS_URL", "redis://localhost:6379")
-        ttl = self._get_env_int("REDIS_TTL", default=3600)
-        max_connections = self._get_env_int("REDIS_MAX_CONNECTIONS", default=10)
+        ttl = self._get_env_int("REDIS_TTL", default=1800)
+        max_connections = self._get_env_int("REDIS_MAX_CONNECTIONS", default=20)
 
         logger.debug(f"Redis config - url: {url}, ttl: {ttl}s, max_connections: {max_connections}")
 
@@ -202,8 +202,8 @@ class EnvironmentManager:
         Returns:
             CacheConfig: Validated configuration object
         """
-        # Use existing Redis TTL setting directly (no conversion needed)
-        ttl_seconds = self._get_env_int("REDIS_TTL", default=3600)
+        # Use existing Redis TTL setting directly
+        ttl_seconds = self._get_env_int("REDIS_TTL", default=1800)
 
         logger.debug(f"Cache config - ttl_seconds: {ttl_seconds}s (from REDIS_TTL)")
 
@@ -290,8 +290,8 @@ class EnvironmentManager:
             # Fallback to defaults if not loaded
             self._redis_config = RedisConfig(
                 url="redis://localhost:6379",
-                ttl=3600,
-                max_connections=10,
+                ttl=1800,
+                max_connections=20,
             )
         return self._redis_config
 
@@ -318,7 +318,7 @@ class EnvironmentManager:
         """
         if self._cache_config is None:
             # Fallback to defaults if not loaded
-            self._cache_config = CacheConfig(ttl_seconds=3600)  # 1 hour default
+            self._cache_config = CacheConfig(ttl_seconds=1800)  # 30min default
         return self._cache_config
 
 
