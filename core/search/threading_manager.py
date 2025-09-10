@@ -46,6 +46,11 @@ class SearchResult:
     jobs_count: int = 0
     task_id: Optional[str] = None
 
+    # Filter statistics
+    original_jobs_count: int = 0  # Jobs before filtering
+    filtered_jobs_count: int = 0  # Jobs removed as false remote
+    remaining_jobs_count: int = 0  # Jobs after filtering
+
 
 class ThreadingManager:
     """
@@ -174,12 +179,6 @@ class ThreadingManager:
                             progress_percent,
                         )
 
-                    # Log result
-                    if result.success:
-                        self.logger.info(f"✅ {result.country}: {result.jobs_count} jobs in {result.search_time:.2f}s")
-                    else:
-                        self.logger.warning(f"❌ {result.country}: {result.error}")
-
                 except Exception as e:
                     # Handle task execution errors
                     with self._lock:
@@ -209,6 +208,9 @@ class ThreadingManager:
         # Combine results
         combined_jobs = self._combine_results(all_results)
 
+        # Generate final summary report
+        self._generate_final_summary_report(all_results, total_time, successful_countries, total_countries)
+
         # Final progress update
         if progress_callback:
             progress_callback(
@@ -236,6 +238,77 @@ class ThreadingManager:
                 },
             },
         }
+
+    def _generate_final_summary_report(
+        self, all_results: List[SearchResult], total_time: float, successful_countries: int, total_countries: int
+    ) -> None:
+        """Generate and display a final summary report of the search results."""
+
+        print("\n" + "=" * 80)
+        print("📊 FINAL SEARCH SUMMARY REPORT")
+        print("=" * 80)
+
+        # Country-by-country breakdown
+        print("🌍 PER-COUNTRY BREAKDOWN:")
+        print("-" * 70)
+
+        # Column headers
+        print(f"{'Country':<20} {'Original':>8} {'Filtered':>8} {'Filter Rate':>11} {'Remaining':>9}")
+        print("-" * 70)
+
+        total_original = 0
+        total_filtered = 0
+        total_remaining = 0
+
+        successful_results = [r for r in all_results if r.success and r.jobs is not None]
+
+        if not successful_results:
+            print(f"{'No successful search results to display':<56}")
+            print("-" * 70)
+
+            # Add total row for no results
+            print(f"{'TOTAL':<20} {'0':>8} {'0':>8} {'0.0%':>10} {'0':>9}")
+            print("-" * 70)
+        else:
+            for result in successful_results:
+                original = result.original_jobs_count
+                filtered = result.filtered_jobs_count
+                remaining = result.remaining_jobs_count
+
+                total_original += original
+                total_filtered += filtered
+                total_remaining += remaining
+
+                filter_rate = (filtered / original * 100) if original > 0 else 0
+
+                print(f"{result.country:<20} {original:>8d} {filtered:>8d} {filter_rate:>10.1f}% {remaining:>9d}")
+
+            # Add total row
+            overall_filter_rate = (total_filtered / total_original * 100) if total_original > 0 else 0
+            print("-" * 70)
+            print(
+                f"{'TOTAL':<20} {total_original:>8} {total_filtered:>8} "
+                f"{overall_filter_rate:>10.1f}% {total_remaining:>9}"
+            )
+            print("-" * 70)
+
+        # Performance summary
+        print("\n⚡ PERFORMANCE SUMMARY:")
+        print("-" * 30)
+        print(f"{'Total Search Time:':<12} {total_time:>.2f}s")
+        print(f"{'Countries Searched:':<12} {successful_countries:>2d}")
+        print(
+            f"{'Success Rate:':<12} {(successful_countries / total_countries * 100):>.1f}%"
+            if total_countries > 0
+            else "Success Rate:     0.0%"
+        )
+        print(
+            f"{'Avg Time/Country:':<12} {(total_time / total_countries):>.2f}s"
+            if total_countries > 0
+            else "Avg Time/Country:  0.00s"
+        )
+
+        print("=" * 80 + "\n")
 
     def _search_single_country_threaded(self, task: SearchTask, search_func: Callable) -> SearchResult:
         """
@@ -281,6 +354,9 @@ class ThreadingManager:
                     jobs_df = jobs_df.copy()
                     jobs_df["source_country"] = task.country
 
+                # Extract filter statistics if available
+                filter_stats = result.get("filter_stats", {})
+
                 return SearchResult(
                     country=task.country,
                     success=True,
@@ -288,6 +364,9 @@ class ThreadingManager:
                     search_time=search_time,
                     jobs_count=jobs_count,
                     task_id=task.task_id,
+                    original_jobs_count=filter_stats.get("original_count", jobs_count),
+                    filtered_jobs_count=filter_stats.get("filtered_count", 0),
+                    remaining_jobs_count=filter_stats.get("remaining_count", jobs_count),
                 )
             else:
                 return SearchResult(

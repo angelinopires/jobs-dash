@@ -11,7 +11,7 @@ This scraper leverages:
 import logging
 import time
 import urllib.parse
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import pandas as pd
 from jobspy import scrape_jobs
@@ -118,7 +118,7 @@ class IndeedScraper(SearchOrchestrator):
 
         return search_params
 
-    def _call_scraping_api(self, search_params: Dict[str, Any]) -> pd.DataFrame:
+    def _call_scraping_api(self, search_params: Dict[str, Any], country: Optional[str] = None) -> pd.DataFrame:
         """
         Call JobSpy's scrape_jobs function with Indeed-specific parameters.
         Enhanced with performance monitoring and error handling.
@@ -144,11 +144,6 @@ class IndeedScraper(SearchOrchestrator):
             self.performance_monitor.log_api_call(
                 site=site, search_term=search_term, url=approx_url, response_time=api_time
             )
-
-            if not jobs_df.empty:
-                self.performance_monitor.log("API success", f"✅ {len(jobs_df)} jobs found")
-            else:
-                self.performance_monitor.log("API warning", "⚠️ No jobs found")
 
             return jobs_df if not jobs_df.empty else pd.DataFrame()
 
@@ -440,9 +435,6 @@ class IndeedScraper(SearchOrchestrator):
 
         if "results_wanted" in search_params:
             log_parts.append(f"Results: {search_params['results_wanted']}")
-
-        log_message = " | ".join(log_parts)
-        self.performance_monitor.log("API call prep", log_message)
 
     def _construct_indeed_url_preview(self, search_params: Dict[str, Any]) -> str:
         """Construct approximate Indeed URL for logging."""

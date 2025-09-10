@@ -74,28 +74,6 @@ class PerformanceMonitor:
             }
         )
 
-        # Log search completion - clean, readable format with separator
-        status = "✅ SUCCESS" if success else "❌ FAILED"
-        search_term = (
-            self.current_search["search_term"][:30] + "..."
-            if len(self.current_search["search_term"]) > 30
-            else self.current_search["search_term"]
-        )
-        separator = "═" * 60
-
-        if error_msg:
-            self.logger.info(
-                f"🔍 {status} | {search_term} → {self.current_search['where']} | "
-                f"⏱️ {total_time:.1f}s | 📊 {job_count} jobs | ❌ {error_msg}"
-            )
-        else:
-            self.logger.info(
-                f"🔍 {status} | {search_term} → {self.current_search['where']} | "
-                f"⏱️ {total_time:.1f}s | 📊 {job_count} jobs"
-            )
-
-        self.logger.info(f"{separator}\n")
-
         # Store in history (keep only recent searches)
         self.search_history.append(self.current_search.copy())
         if len(self.search_history) > self.max_history:
