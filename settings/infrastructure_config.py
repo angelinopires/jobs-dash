@@ -107,6 +107,23 @@ class CacheConfig:
             raise ValueError("Cache TTL cannot exceed 86400 seconds (24 hours)")
 
 
+@dataclass
+class FilterConfig:
+    """
+    Filter Configuration
+
+    This dataclass holds filter-specific settings for job filtering.
+    Controls debug mode for various components.
+    """
+
+    debug_mode: bool = True
+
+    def __post_init__(self) -> None:
+        """Validate configuration after initialization"""
+        if not isinstance(self.debug_mode, bool):
+            raise ValueError("Debug mode must be a boolean value")
+
+
 class EnvironmentManager:
     """
     Environment Variable Manager
@@ -121,6 +138,7 @@ class EnvironmentManager:
         self._redis_config: Optional[RedisConfig] = None
         self._threading_config: Optional[ThreadingConfig] = None
         self._cache_config: Optional[CacheConfig] = None
+        self._filter_config: Optional[FilterConfig] = None
         self._load_configurations()
 
     def _load_configurations(self) -> None:
@@ -133,6 +151,7 @@ class EnvironmentManager:
             self._redis_config = self._load_redis_config()
             self._threading_config = self._load_threading_config()
             self._cache_config = self._load_cache_config()
+            self._filter_config = self._load_filter_config()
 
             logger.info("Environment configurations loaded successfully")
 
@@ -147,6 +166,7 @@ class EnvironmentManager:
             )
             self._threading_config = ThreadingConfig(max_workers=4)
             self._cache_config = CacheConfig(ttl_seconds=1800)  # 30min default
+            self._filter_config = FilterConfig()  # Use defaults
 
     def _load_circuit_breaker_config(self) -> CircuitBreakerConfig:
         """
@@ -208,6 +228,48 @@ class EnvironmentManager:
         logger.debug(f"Cache config - ttl_seconds: {ttl_seconds}s (from REDIS_TTL)")
 
         return CacheConfig(ttl_seconds=ttl_seconds)
+
+    def _load_filter_config(self) -> FilterConfig:
+        """
+        Load filter configuration from environment variables
+
+        Returns:
+            FilterConfig: Validated configuration object
+        """
+        # Get environment variables with fallback defaults
+        debug_mode = self._get_env_bool("DEBUG_MODE", default=False)
+
+        logger.debug(f"Filter config - debug_mode: {debug_mode}")
+
+        return FilterConfig(
+            debug_mode=debug_mode,
+        )
+
+    def _get_env_bool(self, key: str, default: bool) -> bool:
+        """
+        Get boolean environment variable with validation
+
+        Args:
+            key: Environment variable name
+            default: Default value if not set or invalid
+
+        Returns:
+            bool: Validated boolean value
+        """
+        value = os.getenv(key)
+
+        if value is None:
+            logger.debug(f"Environment variable {key} not set, using default: {default}")
+            return default
+
+        # Convert string to boolean
+        if value.lower() in ("true", "1", "yes", "on", "enabled"):
+            return True
+        elif value.lower() in ("false", "0", "no", "off", "disabled"):
+            return False
+        else:
+            logger.warning(f"Environment variable {key} is not a valid boolean, using default: {default}")
+            return default
 
     def _get_env_float(self, key: str, default: float) -> float:
         """
@@ -321,6 +383,19 @@ class EnvironmentManager:
             self._cache_config = CacheConfig(ttl_seconds=1800)  # 30min default
         return self._cache_config
 
+    @property
+    def filter(self) -> FilterConfig:
+        """
+        Get filter configuration
+
+        Returns:
+            FilterConfig: Current filter settings
+        """
+        if self._filter_config is None:
+            # Fallback to defaults if not loaded
+            self._filter_config = FilterConfig()
+        return self._filter_config
+
 
 # Global environment manager instance
 # This is like a singleton service in Angular or a global context in React
@@ -378,3 +453,13 @@ def get_cache_config() -> CacheConfig:
         CacheConfig: Current cache settings
     """
     return get_environment_manager().cache
+
+
+def get_filter_config() -> FilterConfig:
+    """
+    Convenience function to get filter configuration
+
+    Returns:
+        FilterConfig: Current filter settings
+    """
+    return get_environment_manager().filter

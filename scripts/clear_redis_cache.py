@@ -3,7 +3,7 @@
 Redis Cache Clearer
 Safely clears all cached job search results from Redis.
 
-How to use: python cache_improvements/clear_redis_cache.py
+How to use: python scripts/clear_redis_cache.py
 """
 
 import os
@@ -12,11 +12,12 @@ from typing import List, Optional, cast
 
 import redis
 
-from core.redis.redis_manager import RedisManager
-
 # Add project root to Python path so we can import core modules
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, project_root)
+
+# Import after path modification
+from core.redis.redis_manager import RedisManager  # noqa: E402
 
 
 def clear_redis_cache(confirm: bool = False) -> None:

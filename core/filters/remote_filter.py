@@ -14,9 +14,11 @@ Key Features:
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import pandas as pd
+
+from settings.infrastructure_config import get_filter_config
 
 from .pattern_definitions import HIGH_CONFIDENCE_DISQUALIFIERS
 
@@ -42,16 +44,25 @@ class RemoteJobFilter:
         debug_output_dir: Directory for saving debug output files
     """
 
-    def __init__(self, debug_mode: bool = True):
+    def __init__(self, debug_mode: Optional[bool] = None) -> None:
         """
         Initialize the RemoteJobFilter with disqualifier-only filtering approach.
 
         Args:
             debug_mode: If True, saves filtered jobs to JSON files for validation.
+                       If None, uses environment variable DEBUG_MODE.
                        Set to False in production to disable debug output.
         """
         self.negative_patterns = HIGH_CONFIDENCE_DISQUALIFIERS
-        self.debug_mode = debug_mode
+
+        # Get configuration from environment if not explicitly provided
+        if debug_mode is None:
+            filter_config = get_filter_config()
+            self.debug_mode = filter_config.debug_mode
+        else:
+            self.debug_mode = debug_mode
+
+        # Set debug output directory
         self.debug_output_dir = Path("job_positions")
 
         # Ensure debug directory exists if debug mode is enabled

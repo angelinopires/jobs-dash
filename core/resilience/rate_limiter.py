@@ -46,12 +46,12 @@ class RateLimitConfig:
     """
 
     base_delay: float = 1.0  # Base delay in seconds
-    max_delay: float = 5.0  # Maximum delay in seconds
+    max_delay: float = 10.0  # Maximum delay in seconds
     jitter_factor: float = 0.1  # Jitter range (0.9-1.1x multiplier)
     slow_response_threshold: float = 5.0  # Response time threshold for "slow" state
     aggressive_response_threshold: float = 10.0  # Response time threshold for "aggressive" state
-    slow_multiplier: float = 1.1  # Delay multiplier when API is slow
-    aggressive_multiplier: float = 1.2  # Delay multiplier when API is very slow
+    slow_multiplier: float = 1.05  # Delay multiplier when API is slow
+    aggressive_multiplier: float = 1.1  # Delay multiplier when API is very slow
 
     def __post_init__(self) -> None:
         """Validate configuration after initialization"""
@@ -169,8 +169,11 @@ class IntelligentRateLimiter:
         """
         stats = self.get_endpoint_stats(endpoint)
 
-        # Base delay with exponential backoff
+        # Base delay with exponential backoff (capped more aggressively)
         base_delay = self.config.base_delay * (1.5 ** (attempt - 1))
+        # Cap exponential backoff at 3 attempts to prevent excessive delays
+        if attempt > 3:
+            base_delay = self.config.base_delay * (1.5**2)  # Max 2.25x base delay
         base_delay = min(base_delay, self.config.max_delay)
 
         # Apply state-based multiplier
