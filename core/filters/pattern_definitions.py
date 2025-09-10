@@ -88,7 +88,9 @@ OFFICE_PATTERNS = {
     "MUST_BE_IN_OFFICE": re.compile(r"\bmust[-\s]+be[-\s]+in[-\s]+(our|the|a)?[-\s]*office\b", re.IGNORECASE),
     "NO_REMOTE_OPTION": re.compile(r"\bno\s+remote\s+(option|work)\b", re.IGNORECASE),
     "OFFICE_REQUIRED": re.compile(
-        r"\boffice\s+(presence|attendance|work)\s+(required|mandatory|necessary)\b", re.IGNORECASE
+        r"\b(office\s+(presence|attendance|work)\s+(required|mandatory|necessary)"
+        r"|office\s+presence\s+is\s+mandatory)\b",
+        re.IGNORECASE,
     ),
     "WORK_FROM_OFFICE": re.compile(r"\bwork[-\s]+from[-\s]+(our|the|a)?[-\s]*office\b", re.IGNORECASE),
 }
@@ -96,7 +98,8 @@ OFFICE_PATTERNS = {
 # Hybrid work patterns
 HYBRID_PATTERNS = {
     "DAYS_IN_OFFICE": re.compile(
-        r"\b(\d+|one|two|three|four|five)\s+days?\s+(a|per)\s+week.*?\b(in|at)\s+(the\s+)?office\b", re.IGNORECASE
+        r"\b(\d+|one|two|three|four|five)\s+days?\s+(?:(?:a|per)\s+week\s+)?(?:in|at)\s+(?:the\s+)?office\b",
+        re.IGNORECASE,
     ),
     "EXPLICIT_HYBRID_ROLE": re.compile(r"\bthis\s+is\s+a\s+hybrid\s+role\b", re.IGNORECASE),
     "HYBRID_POSITION": re.compile(r"\bhybrid\s+(position|role|job|arrangement)\b", re.IGNORECASE),
@@ -111,7 +114,7 @@ HYBRID_PATTERNS = {
 # Citizenship and legal requirements
 CITIZENSHIP_PATTERNS = {
     # Generic citizenship patterns
-    "CITIZENSHIP_REQUIRED": re.compile(r"\bcitizenship\s+(required|preferred|needed)\b", re.IGNORECASE),
+    "CITIZENSHIP_REQUIRED": re.compile(r"\b(?<!no\s)citizenship\s+(required|preferred|needed)\b", re.IGNORECASE),
     "CITIZEN_RESIDENT_REQUIRED": re.compile(
         r"\bmust\s+be\s+\w+\s+(citizen|permanent resident|resident)\b", re.IGNORECASE
     ),
@@ -141,7 +144,7 @@ AUTHORIZATION_PATTERNS = {
 
 # Security clearance patterns
 SECURITY_PATTERNS = {
-    "CLEARANCE_REQUIRED": re.compile(r"\bclearance\s+(required|needed|necessary|preferred)\b", re.IGNORECASE),
+    "CLEARANCE_REQUIRED": re.compile(r"\b(?<!no\s)clearance\s+(required|needed|necessary|preferred)\b", re.IGNORECASE),
     "EXPORT_CONTROL_ACCESS": re.compile(r"\baccess\s+to\s+U\.?S\.?\s+export[\s\-]*controlled\b", re.IGNORECASE),
     "EXPORT_CONTROL_REQUIREMENT": re.compile(r"\bexport\s+control\s+(requirements?|compliance)\b", re.IGNORECASE),
     "EXPORT_CONTROLLED_INFO": re.compile(r"\bexport[\s\-]*controlled\s+information\b", re.IGNORECASE),
@@ -152,7 +155,7 @@ SECURITY_PATTERNS = {
 # Visa and sponsorship patterns
 VISA_PATTERNS = {
     "ABLE_TO_RELOCATE": re.compile(r"\bable\s+to\s+relocate\s+(without\s+sponsorship)?\b", re.IGNORECASE),
-    "RELOCATION_REQUIRED": re.compile(r"\brelocation\s+(required|needed|necessary|expected)\b", re.IGNORECASE),
+    "RELOCATION_REQUIRED": re.compile(r"\b(?<!no\s)relocation\s+(required|needed|necessary|expected)\b", re.IGNORECASE),
     "RELOCATION_WITHOUT_SPONSORSHIP": re.compile(r"\brelocate\s+\(without\s+sponsorship\)\b", re.IGNORECASE),
     "SPONSORSHIP_NOT_AVAILABLE": re.compile(r"\bsponsorship\s+is\s+not\s+available\b", re.IGNORECASE),
     "VISA_ASSISTANCE": re.compile(
@@ -164,9 +167,10 @@ VISA_PATTERNS = {
 TRAVEL_PATTERNS = {
     # Deal-breaking frequent travel
     "WEEKLY_TRAVEL": re.compile(
-        r"\b(\d+|one|two|three|four|five)\s+(day|week)s?\s+"
-        r"(a\s+|per\s+)?(month|week|weekend|weekends)?\s+in\s+"
-        r"(office|the\s+office)\b",
+        r"\b(weekly|(\d+|one|two|three|four|five)\s+(day|week)s?\s+"
+        r"(a\s+|per\s+)?(month|week|weekend|weekends)?)\s+"
+        r"(travel|in\s+(office|the\s+office))\s+"
+        r"(required|mandatory|necessary|expected)?\b",
         re.IGNORECASE,
     ),
     "MULTIPLE_WEEKS_MONTH": re.compile(r"\b(\d+|one|two|three|four)\s+weeks?\s+(a|per)\s+month\b", re.IGNORECASE),
