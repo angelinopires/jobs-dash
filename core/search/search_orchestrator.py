@@ -60,7 +60,7 @@ class SearchOrchestrator(ABC):
         pass
 
     @abstractmethod
-    def _call_scraping_api(self, search_params: Dict[str, Any]) -> pd.DataFrame:
+    def _call_scraping_api(self, search_params: Dict[str, Any], country: Optional[str] = None) -> pd.DataFrame:
         """Call the actual scraping library/API."""
         pass
 
@@ -96,6 +96,7 @@ class SearchOrchestrator(ABC):
                 endpoint,
                 self._call_scraping_api,
                 search_params,
+                country,
                 progress_callback=progress_callback,
             )
 
@@ -225,6 +226,11 @@ class SearchOrchestrator(ABC):
         jobs_df = self._call_scraping_api_with_circuit_breaker(api_params, country=country)
         api_time = max(0.0, time.time() - start_time)  # Ensure non-negative time
 
+        # Apply post-processing filters (including remote job filtering)
+        filter_stats = None
+        if not jobs_df.empty:
+            jobs_df, filter_stats = self._apply_post_processing_filters(jobs_df, **filters)
+
         # Process results
         if not jobs_df.empty:
             processed_jobs = self._process_jobs_optimized(jobs_df)
@@ -234,6 +240,7 @@ class SearchOrchestrator(ABC):
                 "jobs": processed_jobs,
                 "count": len(processed_jobs),
                 "search_time": api_time,
+                "filter_stats": filter_stats,
                 "message": f"Found {len(processed_jobs)} jobs in {country}",
                 "metadata": {"country": country, "api_time": api_time, "scraper": self.scraper_name},
             }
@@ -243,6 +250,7 @@ class SearchOrchestrator(ABC):
                 "jobs": pd.DataFrame(),
                 "count": 0,
                 "search_time": api_time,
+                "filter_stats": filter_stats,
                 "message": f"No jobs found in {country}",
                 "metadata": {"country": country, "api_time": api_time, "scraper": self.scraper_name},
             }
@@ -308,17 +316,6 @@ class SearchOrchestrator(ABC):
 
         # Add scraper metadata
         result["metadata"]["scraper"] = self.scraper_name
-
-        # Log performance metrics
-        performance = result["metadata"].get("performance", {})
-        speedup = performance.get("speedup_factor", 1.0)
-        success_rate = performance.get("success_rate", 0.0)
-
-        self.performance_monitor.log(
-            "Parallel search",
-            f"🚀 {len(countries)} countries in {result['search_time']:.2f}s "
-            f"(speedup: {speedup:.1f}x, success: {success_rate:.1%})",
-        )
 
         return result
 
@@ -394,3 +391,66 @@ class SearchOrchestrator(ABC):
             return self.rate_limiter.get_endpoint_status(endpoint)
         else:
             return self.rate_limiter.get_all_endpoints_status()
+
+    def _apply_post_processing_filters(self, jobs_df: pd.DataFrame, **filters: Any) -> pd.DataFrame:
+        """
+        Apply post-processing filters that aren't supported by the API.
+        This includes remote job filtering to remove false remote positions.
+        """
+        if jobs_df.empty:
+            return jobs_df
+
+        # Apply remote filtering for remote searches
+        filter_stats = None
+        if filters.get("include_remote", False):
+            jobs_df, filter_stats = self._filter_false_remote_jobs(jobs_df, filters.get("where", "unknown"))
+
+        return jobs_df, filter_stats
+
+    def _filter_false_remote_jobs(self, jobs_df: pd.DataFrame, country: str = "unknown") -> tuple[pd.DataFrame, dict]:
+        """
+        Filter out jobs that claim to be remote but aren't legitimate remote positions.
+
+        Args:
+            jobs_df: DataFrame containing job data to filter
+            country: Country name for the search (used for debug file naming)
+
+        Returns:
+            tuple: (filtered_dataframe, statistics_dict)
+        """
+        try:
+            from core.filters.remote_filter import RemoteJobFilter
+
+            # Initialize the remote filter
+            remote_filter = RemoteJobFilter()
+
+            original_count = len(jobs_df)
+
+            # Apply filtering - this will also save debug output if enabled
+            filtered_df = remote_filter.filter_false_remote_jobs(jobs_df, country)
+
+            filtered_count = original_count - len(filtered_df)
+            remaining_count = len(filtered_df)
+
+            # Create statistics dict
+            stats = {
+                "original_count": original_count,
+                "filtered_count": filtered_count,
+                "remaining_count": remaining_count,
+                "filter_rate": (filtered_count / original_count * 100) if original_count > 0 else 0.0,
+            }
+
+            return filtered_df, stats
+
+        except Exception as e:
+            print(f"⚠️  WARNING: Remote filtering failed: {e}")
+            print("🔄 Continuing with unfiltered results...")
+
+            # Return original data with zero filter stats
+            stats = {
+                "original_count": len(jobs_df),
+                "filtered_count": 0,
+                "remaining_count": len(jobs_df),
+                "filter_rate": 0.0,
+            }
+            return jobs_df, stats
